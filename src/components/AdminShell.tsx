@@ -17,7 +17,7 @@ const getNavLinkClass = (isActive: boolean) =>
   `shrink-0 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
     isActive
       ? 'bg-jungle-accent text-white'
-      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+      : 'text-jungle-text/70 hover:text-jungle-text hover:bg-white/5'
   }`;
 
 const AdminShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -51,10 +51,10 @@ const AdminShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
+      <header className="sticky top-0 z-40 bg-jungle-surface border-b border-wood-brown">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
-            <span className="font-display text-lg font-bold text-slate-900 shrink-0">Parties 24/7 · Admin</span>
+            <span className="font-display text-lg font-bold text-jungle-text shrink-0">Parties 24/7 · Admin</span>
             <nav className="flex items-center gap-1 overflow-x-auto">
               {navItems.map((item) => (
                 <NavLink

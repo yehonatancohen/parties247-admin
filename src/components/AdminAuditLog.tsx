@@ -78,28 +78,28 @@ const AdminAuditLog: React.FC = () => {
     };
 
     return (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div className="bg-jungle-surface border border-wood-brown rounded-2xl p-6 shadow-lg">
             <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xl text-slate-900 font-bold flex items-center gap-2">
+                <h3 className="text-xl text-jungle-text font-bold flex items-center gap-2">
                     🛡️ יומן פעולות ניהול
                 </h3>
             </div>
-            <p className="text-xs text-slate-500 mb-4">
+            <p className="text-xs text-jungle-text/60 mb-4">
                 מעקב אחר שינויים שבוצעו בפאנל הניהול. זיהוי המבצע מבוסס על כתובת IP בלבד — למערכת אין כניסה אישית לכל מנהל.
             </p>
 
             {isLoading ? (
                 <div className="p-6 flex justify-center"><LoadingSpinner /></div>
             ) : error ? (
-                <div className="p-4 bg-red-50 text-red-700 rounded-xl border border-red-200 text-sm">{error}</div>
+                <div className="p-4 bg-red-500/10 text-red-300 rounded-xl border border-red-500/30 text-sm">{error}</div>
             ) : entries.length === 0 ? (
-                <div className="p-6 text-center text-slate-400">אין פעולות רשומות עדיין</div>
+                <div className="p-6 text-center text-jungle-text/50">אין פעולות רשומות עדיין</div>
             ) : (
                 <>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="text-slate-500 text-xs border-b border-slate-100">
+                                <tr className="text-jungle-text/50 text-xs border-b border-wood-brown">
                                     <th className="text-right py-2 px-3">זמן</th>
                                     <th className="text-right py-2 px-3">פעולה</th>
                                     <th className="text-right py-2 px-3">יעד</th>
@@ -110,23 +110,23 @@ const AdminAuditLog: React.FC = () => {
                             <tbody>
                                 {entries.map((entry) => (
                                     <React.Fragment key={entry.id}>
-                                        <tr className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                                            <td className="py-2 px-3 text-slate-500 font-mono text-xs whitespace-nowrap">
+                                        <tr className="border-b border-wood-brown/50 hover:bg-white/5 transition-colors">
+                                            <td className="py-2 px-3 text-jungle-text/60 font-mono text-xs whitespace-nowrap">
                                                 {new Date(entry.timestamp).toLocaleString('he-IL', {
                                                     day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
                                                 })}
                                             </td>
-                                            <td className="py-2 px-3 text-slate-700 font-medium">{actionLabel(entry.action)}</td>
-                                            <td className="py-2 px-3 text-slate-500 text-xs">
+                                            <td className="py-2 px-3 text-jungle-text font-medium">{actionLabel(entry.action)}</td>
+                                            <td className="py-2 px-3 text-jungle-text/60 text-xs">
                                                 {entry.targetType || '-'}
-                                                {entry.targetId && <span className="text-slate-400 font-mono"> · {entry.targetId}</span>}
+                                                {entry.targetId && <span className="text-jungle-text/40 font-mono"> · {entry.targetId}</span>}
                                             </td>
-                                            <td className="py-2 px-3 text-slate-500 font-mono text-xs">{entry.ip || '-'}</td>
+                                            <td className="py-2 px-3 text-jungle-text/60 font-mono text-xs">{entry.ip || '-'}</td>
                                             <td className="py-2 px-3 text-left">
                                                 {entry.details && (
                                                     <button
                                                         onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
-                                                        className="text-xs text-jungle-accent hover:underline"
+                                                        className="text-xs text-jungle-lime hover:underline"
                                                     >
                                                         {expandedId === entry.id ? 'הסתר' : 'פרטים'}
                                                     </button>
@@ -134,9 +134,9 @@ const AdminAuditLog: React.FC = () => {
                                             </td>
                                         </tr>
                                         {expandedId === entry.id && entry.details && (
-                                            <tr className="bg-slate-50">
+                                            <tr className="bg-white/5">
                                                 <td colSpan={5} className="py-2 px-3">
-                                                    <pre className="text-xs text-slate-500 whitespace-pre-wrap break-words font-mono">
+                                                    <pre className="text-xs text-jungle-text/60 whitespace-pre-wrap break-words font-mono">
                                                         {JSON.stringify(entry.details, null, 2)}
                                                     </pre>
                                                 </td>
@@ -152,7 +152,7 @@ const AdminAuditLog: React.FC = () => {
                             <button
                                 onClick={handleLoadMore}
                                 disabled={isLoadingMore}
-                                className="px-4 py-1.5 text-xs bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg border border-slate-200 transition disabled:opacity-50"
+                                className="px-4 py-1.5 text-xs bg-white/5 hover:bg-white/10 text-jungle-text/70 rounded-lg border border-wood-brown transition disabled:opacity-50"
                             >
                                 {isLoadingMore ? <LoadingSpinner size="sm" /> : 'טען עוד'}
                             </button>

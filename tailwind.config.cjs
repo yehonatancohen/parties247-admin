@@ -12,23 +12,23 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Historically a jungle/green theme; remapped to a clean, neutral,
-        // light "professional dashboard" palette. Class names (jungle-*,
-        // wood-brown) are kept as-is across components so this file is the
-        // single place that controls the admin's look.
-        'jungle-deep': '#f8fafc',   // page background (was near-black)
-        'jungle-surface': '#ffffff', // card/panel background (was dark teal)
-        'jungle-accent': '#2563eb', // primary accent (was mint green)
-        'jungle-lime': '#3b82f6',   // secondary accent / highlights (was lime)
-        'jungle-text': '#334155',   // body text (was light mint)
-        'wood-brown': '#e2e8f0',    // subtle borders (was dark brown)
+        // Historically a jungle/green theme; remapped to a neutral, dark
+        // "professional dashboard" palette (slate, not green). Class names
+        // (jungle-*, wood-brown) are kept as-is across components so this
+        // file is the single place that controls the admin's look.
+        'jungle-deep': '#0f172a',    // page background (slate-900)
+        'jungle-surface': '#1e293b', // card/panel background (slate-800)
+        'jungle-accent': '#3b82f6',  // primary accent (blue-500)
+        'jungle-lime': '#38bdf8',    // secondary accent / highlights (sky-400)
+        'jungle-text': '#cbd5e1',    // body text (slate-300)
+        'wood-brown': '#334155',     // subtle borders (slate-700)
       },
       fontFamily: {
         sans: ['var(--font-assistant)', '"Assistant"', 'sans-serif'],
         display: ['var(--font-assistant)', '"Assistant"', 'sans-serif'],
       },
       boxShadow: {
-        'jungle-glow': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        'jungle-glow': '0 0 0 1px rgba(59, 130, 246, 0.15)',
       },
     },
   },

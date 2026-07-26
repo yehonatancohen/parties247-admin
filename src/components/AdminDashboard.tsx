@@ -5,8 +5,49 @@ import { Party, Carousel } from '../data/types';
 import LoadingSpinner from './LoadingSpinner';
 import { BASE_URL, LAST_TICKETS_TAG } from '../data/constants';
 import { SearchIcon, EditIcon, ChevronDownIcon, ArrowUpIcon, ArrowDownIcon, MegaphoneIcon, ShareIcon, RefreshIcon, DocumentDuplicateIcon } from './Icons';
-// ... (skip lines) ...
 
+const MoreIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <circle cx="5" cy="12" r="2" />
+    <circle cx="12" cy="12" r="2" />
+    <circle cx="19" cy="12" r="2" />
+  </svg>
+);
+
+const TrashIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+  </svg>
+);
+
+// Replaces window.confirm/alert-style native popups with an in-app dialog,
+// so destructive actions get a consistent, non-jarring confirmation.
+const ConfirmDialog: React.FC<{
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  danger?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}> = ({ title, message, confirmLabel = 'Confirm', danger, onConfirm, onCancel }) => (
+  <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+    <div className="bg-jungle-surface rounded-lg shadow-2xl w-full max-w-sm border border-wood-brown p-6">
+      <h3 className="text-lg font-display text-jungle-text mb-2">{title}</h3>
+      <p className="text-sm text-jungle-text/70 mb-6">{message}</p>
+      <div className="flex justify-end gap-3">
+        <button onClick={onCancel} className="bg-gray-600 text-white font-bold py-2 px-4 rounded-md hover:bg-opacity-80 text-sm">
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          className={`font-bold py-2 px-4 rounded-md text-sm text-white ${danger ? 'bg-red-600 hover:bg-red-700' : 'bg-jungle-accent hover:opacity-90'}`}
+        >
+          {confirmLabel}
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
 const ClonePartyModal: React.FC<{ party: Party; onClose: () => void; onClone: (url: string, slug: string, referral: string, pixelId?: string) => Promise<void>; }> = ({ party, onClose, onClone }) => {
   const [url, setUrl] = useState(party.originalUrl || '');
@@ -23,14 +64,14 @@ const ClonePartyModal: React.FC<{ party: Party; onClose: () => void; onClone: (u
     onClose();
   };
 
-  const inputClass = "w-full bg-jungle-deep text-slate-900 p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none";
+  const inputClass = "w-full bg-jungle-deep text-jungle-text p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none";
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
       <div className="bg-jungle-surface rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col border border-wood-brown">
         <div className="p-4 border-b border-wood-brown flex justify-between items-center">
-          <h3 className="text-xl font-display text-slate-900">Clone Party</h3>
-          <button onClick={onClose} className="text-2xl text-jungle-text/70 hover:text-slate-900">&times;</button>
+          <h3 className="text-xl font-display text-jungle-text">Clone Party</h3>
+          <button onClick={onClose} className="text-2xl text-jungle-text/70 hover:text-jungle-text">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
           <div className="bg-blue-500/10 border border-blue-500/30 p-3 rounded-md text-sm text-blue-200 mb-4">
@@ -54,7 +95,7 @@ const ClonePartyModal: React.FC<{ party: Party; onClose: () => void; onClone: (u
           </div>
           <div className="flex justify-end gap-3 pt-4">
             <button type="button" onClick={onClose} className="bg-gray-600 text-white font-bold py-2 px-6 rounded-md hover:bg-opacity-80">Cancel</button>
-            <button type="submit" disabled={isSaving} className="bg-jungle-accent text-jungle-deep font-bold py-2 px-6 rounded-md hover:bg-opacity-80 disabled:bg-gray-500 flex items-center">
+            <button type="submit" disabled={isSaving} className="bg-jungle-accent text-white font-bold py-2 px-6 rounded-md hover:bg-opacity-80 disabled:bg-gray-500 flex items-center">
               {isSaving ? <LoadingSpinner /> : 'Clone Party'}
             </button>
           </div>
@@ -111,9 +152,9 @@ const TagInput: React.FC<{ tags: string[]; onTagsChange: (tags: string[]) => voi
     <div>
       <div className="flex flex-wrap gap-1 mb-2">
         {tags.map(tag => (
-          <span key={tag} className="bg-jungle-accent text-jungle-deep text-xs font-semibold px-2 py-1 rounded-full flex items-center">
+          <span key={tag} className="bg-jungle-accent text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center">
             {tag}
-            <button onClick={() => removeTag(tag)} className="mr-1.5 text-jungle-deep hover:text-black text-xs">✖</button>
+            <button onClick={() => removeTag(tag)} className="mr-1.5 text-white/80 hover:text-white text-xs">✖</button>
           </span>
         ))}
       </div>
@@ -123,7 +164,7 @@ const TagInput: React.FC<{ tags: string[]; onTagsChange: (tags: string[]) => voi
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Add a tag and press Enter"
-        className="w-full bg-jungle-deep text-slate-900 p-1 rounded-md border border-wood-brown text-sm"
+        className="w-full bg-jungle-deep text-jungle-text p-1 rounded-md border border-wood-brown text-sm"
       />
     </div>
   );
@@ -187,14 +228,14 @@ const EditPartyModal: React.FC<{ party: Party; onClose: () => void; onSave: (upd
     onClose();
   };
 
-  const inputClass = "w-full bg-jungle-deep text-slate-900 p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none";
+  const inputClass = "w-full bg-jungle-deep text-jungle-text p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none";
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
       <div className="bg-jungle-surface rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col border border-wood-brown">
         <div className="p-4 border-b border-wood-brown flex justify-between items-center">
-          <h3 className="text-xl font-display text-slate-900">Edit Party</h3>
-          <button onClick={onClose} className="text-2xl text-jungle-text/70 hover:text-slate-900">&times;</button>
+          <h3 className="text-xl font-display text-jungle-text">Edit Party</h3>
+          <button onClick={onClose} className="text-2xl text-jungle-text/70 hover:text-jungle-text">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
           <div>
@@ -260,13 +301,13 @@ const EditPartyModal: React.FC<{ party: Party; onClose: () => void; onSave: (upd
               onChange={togglePromotion}
               className="w-4 h-4"
             />
-            <label htmlFor="isPromotion" className="text-sm text-slate-900 font-semibold">
+            <label htmlFor="isPromotion" className="text-sm text-jungle-text font-semibold">
               Is Promotion Party (Hidden from site search)
             </label>
           </div>
           <div className="flex justify-end gap-3 pt-4">
             <button type="button" onClick={onClose} className="bg-gray-600 text-white font-bold py-2 px-6 rounded-md hover:bg-opacity-80">Cancel</button>
-            <button type="submit" disabled={isSaving} className="bg-jungle-accent text-jungle-deep font-bold py-2 px-6 rounded-md hover:bg-opacity-80 disabled:bg-gray-500 flex items-center">
+            <button type="submit" disabled={isSaving} className="bg-jungle-accent text-white font-bold py-2 px-6 rounded-md hover:bg-opacity-80 disabled:bg-gray-500 flex items-center">
               {isSaving ? <LoadingSpinner /> : 'Save Changes'}
             </button>
           </div>
@@ -281,8 +322,20 @@ type PromotionMessage = {
   message: React.ReactNode;
 };
 
+type ConfirmState = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  danger?: boolean;
+  onConfirm: () => void;
+};
+
+type DashboardTab = 'manage' | 'add' | 'carousels' | 'settings';
+
 const AdminDashboard: React.FC = () => {
   const { allParties: parties, addParty, deleteParty, updateParty, carousels, addCarousel, deleteCarousel, updateCarousel, reorderCarousels, addPartyToCarousel, removePartyFromCarousel, defaultReferral, setDefaultReferral } = useParties();
+
+  const [activeTab, setActiveTab] = useState<DashboardTab>('manage');
 
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -296,6 +349,8 @@ const AdminDashboard: React.FC = () => {
 
   const [editingParty, setEditingParty] = useState<Party | null>(null);
   const [cloningParty, setCloningParty] = useState<Party | null>(null);
+  const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
+  const [openMenuPartyId, setOpenMenuPartyId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [partySearchTerm, setPartySearchTerm] = useState('');
   const [partySort, setPartySort] = useState<{ key: 'date' | 'name', direction: 'asc' | 'desc' }>({ key: 'date', direction: 'asc' });
@@ -456,10 +511,6 @@ const AdminDashboard: React.FC = () => {
       `Updated ${updatedCount} cover image${updatedCount === 1 ? '' : 's'}.` +
       (failedCount ? ` ${failedCount} failed.` : '')
     );
-    setCoverRefreshStatus(
-      `Updated ${updatedCount} cover image${updatedCount === 1 ? '' : 's'}.` +
-      (failedCount ? ` ${failedCount} failed.` : '')
-    );
     setIsRefreshingCovers(false);
   }, [activeParties, updateParty]);
 
@@ -585,10 +636,6 @@ const AdminDashboard: React.FC = () => {
     try {
       const result = await triggerPriceUpdate();
       alert(`Price update complete.\nParties checked: ${result.checked}\nPrices updated: ${result.updated}`);
-      // Optionally refresh the parties list to show new prices
-      // Since we don't have a direct refresh function exposed from useParties, we might need to reload or rely on revalidation.
-      // But for admin dashboard, maybe we should trigger a refetch if useParties supports it.
-      // For now, an alert is good feedback.
     } catch (e) {
       console.error("Price update failed", e);
       setError(e instanceof Error ? e.message : 'Failed to update prices');
@@ -646,9 +693,10 @@ const AdminDashboard: React.FC = () => {
     }
   }, [url, addParty, parties, updateParty, defaultReferral, singleAddCarouselIds, addPartyToCarousel, selectedPageTags]);
 
-  const handleSingleAddCarouselChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = Array.from(event.target.selectedOptions).map(option => option.value);
-    setSingleAddCarouselIds(selected);
+  const toggleSingleAddCarousel = (carouselId: string) => {
+    setSingleAddCarouselIds(prev =>
+      prev.includes(carouselId) ? prev.filter(id => id !== carouselId) : [...prev, carouselId]
+    );
   };
 
   const toggleSelectedPageTag = (tag: string) => {
@@ -731,7 +779,7 @@ const AdminDashboard: React.FC = () => {
                 href={highQualityUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline text-jungle-accent hover:text-jungle-accent/80"
+                className="underline text-jungle-lime hover:text-jungle-lime/80"
               >
                 לפתיחת התמונה בלשונית חדשה
               </a>
@@ -790,15 +838,11 @@ const AdminDashboard: React.FC = () => {
     updateParty({ ...party, tags: updatedTags });
   }, [updateParty]);
 
-  const handleCloneParty = useCallback(async (party: Party) => {
+  const performCloneAsPromotion = useCallback(async (party: Party) => {
     if (!party.originalUrl) {
       alert('Cannot clone: Missing original URL');
       return;
     }
-
-    // eslint-disable-next-line
-    const confirm = window.confirm(`Clone "${party.name}" as a PROMOTION party?\n\nThis will create a hidden copy for campaign tracking.`);
-    if (!confirm) return;
 
     try {
       // Create unique URL to force new entry in backend/DB
@@ -812,7 +856,6 @@ const AdminDashboard: React.FC = () => {
       const promotionSlug = `${baseSlug}-promotion`;
 
       // Ensure unique slug if multiple clones exist (though usually only 1 promotion copy per event)
-      // Check if slug taken:
       let finalSlug = promotionSlug;
       let counter = 1;
       while (parties.some(p => p.slug === finalSlug && p.id !== newParty.id)) {
@@ -839,138 +882,194 @@ const AdminDashboard: React.FC = () => {
     }
   }, [addParty, updateParty, parties]);
 
-  // FIX: Explicitly type PartyListItem as React.FC to correctly handle props like 'key' and resolve assignment errors.
-  const PartyListItem: React.FC<{ party: Party }> = ({ party }) => (
-    <div className="bg-jungle-deep p-3 rounded-md">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        {/* Party Info */}
-        <div className="flex-grow min-w-0 w-full">
-          <p className="font-semibold text-slate-900 text-lg truncate m-0">{party.name}</p>
-          <p className="text-sm text-jungle-text/60 m-0">{party.location.name} - {new Date(party.date).toLocaleDateString('he-IL')}</p>
-          <div className="flex items-center gap-2 mt-2">
-            <label htmlFor={`ref-${party.id}`} className="text-xs text-jungle-text/60 whitespace-nowrap">Ref:</label>
-            <input
-              id={`ref-${party.id}`}
-              type="text"
-              value={party.referralCode || ''}
-              onChange={(e) => updateParty({ ...party, referralCode: e.target.value })}
-              placeholder="Default"
-              className="w-full max-w-[150px] bg-jungle-surface text-slate-900 p-1 rounded-sm border border-wood-brown text-xs"
-            />
+  const handleCloneParty = useCallback((party: Party) => {
+    setOpenMenuPartyId(null);
+    setConfirmState({
+      title: 'Clone as Promotion Party',
+      message: `Clone "${party.name}" as a hidden PROMOTION party for campaign tracking?`,
+      confirmLabel: 'Clone',
+      onConfirm: () => {
+        performCloneAsPromotion(party);
+        setConfirmState(null);
+      },
+    });
+  }, [performCloneAsPromotion]);
+
+  const handleDeleteParty = useCallback((party: Party) => {
+    setOpenMenuPartyId(null);
+    setConfirmState({
+      title: 'Delete Party',
+      message: `Are you sure you want to delete "${party.name}"? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      danger: true,
+      onConfirm: () => {
+        deleteParty(party.id);
+        setConfirmState(null);
+      },
+    });
+  }, [deleteParty]);
+
+  const rowActionButtonClass = "flex items-center gap-1.5 px-2.5 py-2 rounded-md text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed";
+
+  const PartyListItem: React.FC<{ party: Party }> = ({ party }) => {
+    const menuOpen = openMenuPartyId === party.id;
+    return (
+      <div className="bg-jungle-deep p-3 rounded-md border border-wood-brown/50">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          {/* Party Info */}
+          <div className="flex-grow min-w-0 w-full">
+            <p className="font-semibold text-jungle-text text-lg truncate m-0">{party.name}</p>
+            <p className="text-sm text-jungle-text/60 m-0">{party.location.name} - {new Date(party.date).toLocaleDateString('he-IL')}</p>
+            <div className="flex items-center gap-2 mt-2">
+              <label htmlFor={`ref-${party.id}`} className="text-xs text-jungle-text/60 whitespace-nowrap">Ref:</label>
+              <input
+                id={`ref-${party.id}`}
+                type="text"
+                value={party.referralCode || ''}
+                onChange={(e) => updateParty({ ...party, referralCode: e.target.value })}
+                placeholder="Default"
+                className="w-full max-w-[150px] bg-jungle-surface text-jungle-text p-1 rounded-sm border border-wood-brown text-xs"
+              />
+            </div>
+          </div>
+
+          {/* Actions: Edit + Delete are always visible and clearly separated;
+              everything else (refresh/promo/copy/clone) lives behind a menu
+              so the row stays compact and low-stakes actions never sit
+              directly next to Delete. */}
+          <div className="flex items-center gap-2 w-full md:w-auto mt-4 md:mt-0 flex-shrink-0">
+            <button
+              onClick={() => setEditingParty(party)}
+              className={`${rowActionButtonClass} bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/30`}
+            >
+              <EditIcon className="w-4 h-4" />
+              Edit
+            </button>
+
+            <div className="relative">
+              <button
+                onClick={() => setOpenMenuPartyId(menuOpen ? null : party.id)}
+                className={`${rowActionButtonClass} bg-jungle-surface text-jungle-text/70 hover:text-jungle-text border border-wood-brown`}
+                title="More actions"
+              >
+                <MoreIcon className="w-4 h-4" />
+              </button>
+              {menuOpen && (
+                <>
+                  {/* Click-outside catcher */}
+                  <button
+                    className="fixed inset-0 z-10 cursor-default"
+                    onClick={() => setOpenMenuPartyId(null)}
+                    aria-label="Close menu"
+                  />
+                  <div className="absolute left-0 md:right-0 md:left-auto mt-1 w-52 bg-jungle-surface border border-wood-brown rounded-lg shadow-2xl z-20 py-1 text-sm">
+                    <button
+                      onClick={() => { setOpenMenuPartyId(null); handleRefreshParty(party); }}
+                      disabled={refreshingPartyIds.includes(party.id)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-jungle-text/80 hover:bg-white/5 hover:text-jungle-lime disabled:opacity-50"
+                    >
+                      {refreshingPartyIds.includes(party.id) ? <LoadingSpinner size="sm" /> : <RefreshIcon className="w-4 h-4" />}
+                      Refresh Data
+                    </button>
+                    <button
+                      onClick={() => { setOpenMenuPartyId(null); handlePromoteParty(party); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-jungle-text/80 hover:bg-white/5 hover:text-jungle-accent"
+                    >
+                      <MegaphoneIcon className="w-4 h-4" />
+                      Create Promo Image
+                    </button>
+                    <button
+                      onClick={() => { setOpenMenuPartyId(null); handleCopyPartyLink(party); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-jungle-text/80 hover:bg-white/5 hover:text-jungle-text"
+                    >
+                      <ShareIcon className="w-4 h-4" />
+                      Copy Link
+                    </button>
+                    <button
+                      onClick={() => { setOpenMenuPartyId(null); setCloningParty(party); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-jungle-text/80 hover:bg-white/5 hover:text-purple-400"
+                    >
+                      <DocumentDuplicateIcon className="w-4 h-4" />
+                      Clone (custom URL/slug)
+                    </button>
+                    <div className="my-1 border-t border-wood-brown" />
+                    <button
+                      onClick={() => handleCloneParty(party)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-jungle-text/80 hover:bg-white/5 hover:text-purple-400"
+                    >
+                      <DocumentDuplicateIcon className="w-4 h-4" />
+                      Clone as Promotion
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button
+              onClick={() => handleDeleteParty(party)}
+              className={`${rowActionButtonClass} bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30`}
+            >
+              <TrashIcon className="w-4 h-4" />
+              Delete
+            </button>
           </div>
         </div>
-
-        {/* Actions Toolbar */}
-        <div className="grid grid-cols-6 gap-2 w-full md:w-auto mt-4 md:mt-0">
-          <button
-            onClick={() => handleRefreshParty(party)}
-            disabled={refreshingPartyIds.includes(party.id)}
-            className="flex flex-col items-center justify-center p-2 rounded-md bg-jungle-lime/10 text-jungle-lime hover:bg-jungle-lime/20 border border-jungle-lime/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed h-14"
-            title="Refresh Data"
-          >
-            {refreshingPartyIds.includes(party.id) ? <LoadingSpinner size="sm" /> : <RefreshIcon className="w-4 h-4" />}
-            <span className="text-[10px] mt-1 font-medium">Refresh</span>
-          </button>
-
-          <button
-            onClick={() => handlePromoteParty(party)}
-            className="flex flex-col items-center justify-center p-2 rounded-md bg-jungle-accent/10 text-jungle-accent hover:bg-jungle-accent/20 border border-jungle-accent/30 transition-all h-14"
-            title="Create Promo Image"
-          >
-            <MegaphoneIcon className="w-4 h-4" />
-            <span className="text-[10px] mt-1 font-medium">Promo</span>
-          </button>
-
-          <button
-            onClick={() => handleCopyPartyLink(party)}
-            className="flex flex-col items-center justify-center p-2 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-all h-14"
-            title="Copy Link"
-          >
-            <ShareIcon className="w-4 h-4" />
-            <span className="text-[10px] mt-1 font-medium">Copy</span>
-          </button>
-
-          <button
-            onClick={() => setCloningParty(party)}
-            className="flex flex-col items-center justify-center p-2 rounded-md bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/30 transition-all h-14"
-            title="Clone Party"
-          >
-            <DocumentDuplicateIcon className="w-4 h-4" />
-            <span className="text-[10px] mt-1 font-medium">Clone</span>
-          </button>
-
-          <button
-            onClick={() => setEditingParty(party)}
-            className="flex flex-col items-center justify-center p-2 rounded-md bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/30 transition-all h-14"
-            title="Edit Details"
-          >
-            <EditIcon className="w-4 h-4" />
-            <span className="text-[10px] mt-1 font-medium">Edit</span>
-          </button>
-
-          <button
-            onClick={() => {
-              if (confirm('Are you sure you want to delete this party?')) deleteParty(party.id);
-            }}
-            className="flex flex-col items-center justify-center p-2 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 transition-all h-14"
-            title="Delete Party"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-            </svg>
-            <span className="text-[10px] mt-1 font-medium">Delete</span>
-          </button>
-          <button onClick={() => handleCloneParty(party)} className="bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700 transition-colors text-sm" title="Clone as Promotion Party">
-            Clone Promo
-          </button>
+        <div className="mt-2 pt-2 border-t border-wood-brown">
+          <TagInput tags={party.tags} onTagsChange={(newTags) => updateParty({ ...party, tags: newTags })} />
+          <div className="flex flex-wrap gap-2 mt-2">
+            <button
+              onClick={() => toggleLastTicketsTag(party)}
+              className={`px-3 py-1 rounded-full text-xs border transition-colors ${party.tags.includes(LAST_TICKETS_TAG)
+                ? 'bg-red-500 text-white border-red-400 shadow-lg shadow-red-500/30'
+                : 'bg-jungle-surface text-jungle-text/80 border-wood-brown hover:border-red-400 hover:text-red-400'
+                }`}
+            >
+              כרטיסים אחרונים
+            </button>
+            {pageTagOptions.map((option) => {
+              const isActive = party.tags.includes(option.tag);
+              return (
+                <button
+                  key={option.tag}
+                  onClick={() => handleTogglePartyPageTag(party, option.tag)}
+                  className={`px-3 py-1 rounded-full text-xs border transition-colors ${isActive
+                    ? 'bg-jungle-accent text-white border-jungle-accent'
+                    : 'bg-jungle-surface text-jungle-text/80 border-wood-brown hover:border-jungle-accent hover:text-jungle-accent'
+                    }`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
-      <div className="mt-2 pt-2 border-t border-wood-brown">
-        <TagInput tags={party.tags} onTagsChange={(newTags) => updateParty({ ...party, tags: newTags })} />
-        <div className="flex flex-wrap gap-2 mt-2">
-          <button
-            onClick={() => toggleLastTicketsTag(party)}
-            className={`px-3 py-1 rounded-full text-xs border transition-colors ${party.tags.includes(LAST_TICKETS_TAG)
-              ? 'bg-red-500 text-white border-red-400 shadow-lg shadow-red-500/30'
-              : 'bg-jungle-surface text-jungle-text/80 border-wood-brown hover:border-red-400 hover:text-red-600'
+        {promotionMessages[party.id] && (
+          <p
+            className={`mt-2 text-xs ${promotionMessages[party.id].type === 'success'
+              ? 'text-green-400'
+              : promotionMessages[party.id].type === 'error'
+                ? 'text-red-400'
+                : 'text-jungle-accent'
               }`}
           >
-            כרטיסים אחרונים
-          </button>
-          {pageTagOptions.map((option) => {
-            const isActive = party.tags.includes(option.tag);
-            return (
-              <button
-                key={option.tag}
-                onClick={() => handleTogglePartyPageTag(party, option.tag)}
-                className={`px-3 py-1 rounded-full text-xs border transition-colors ${isActive
-                  ? 'bg-jungle-accent text-jungle-deep border-jungle-accent'
-                  : 'bg-jungle-surface text-jungle-text/80 border-wood-brown hover:border-jungle-accent hover:text-jungle-accent'
-                  }`}
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
+            {promotionMessages[party.id]?.message}
+          </p>
+        )}
       </div>
-      {promotionMessages[party.id] && (
-        <p
-          className={`mt-2 text-xs ${promotionMessages[party.id].type === 'success'
-            ? 'text-green-400'
-            : promotionMessages[party.id].type === 'error'
-              ? 'text-red-400'
-              : 'text-jungle-accent'
-            }`}
-        >
-          {promotionMessages[party.id]?.message}
-        </p>
-      )}
-    </div>
-  );
+    );
+  };
+
+  const sortIndicator = (key: 'date' | 'name') => partySort.key === key ? (partySort.direction === 'asc' ? '↑' : '↓') : '';
+
+  const tabs: { key: DashboardTab; label: string }[] = [
+    { key: 'manage', label: `Manage Parties (${activeParties.length})` },
+    { key: 'add', label: 'Add Party' },
+    { key: 'carousels', label: 'Carousels' },
+    { key: 'settings', label: 'Settings' },
+  ];
 
   return (
-    <div className="bg-jungle-surface p-6 rounded-lg shadow-sm border border-wood-brown w-full space-y-8">
+    <div className="bg-jungle-surface p-6 rounded-lg shadow-lg border border-wood-brown w-full space-y-6">
       {editingParty && (
         <EditPartyModal
           party={editingParty}
@@ -985,140 +1084,174 @@ const AdminDashboard: React.FC = () => {
           onClone={handleClonePartySave}
         />
       )}
-      <h2 className="text-3xl font-display mb-6 text-slate-900">Admin Dashboard</h2>
+      {confirmState && (
+        <ConfirmDialog
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmLabel={confirmState.confirmLabel}
+          danger={confirmState.danger}
+          onConfirm={confirmState.onConfirm}
+          onCancel={() => setConfirmState(null)}
+        />
+      )}
 
-      {/* Settings Section */}
-      <div className="bg-jungle-deep p-4 rounded-md border border-wood-brown/50">
-        <h3 className="text-lg font-semibold mb-3 text-jungle-accent">Settings</h3>
-        <div className="flex flex-col sm:flex-row gap-2 items-center">
-          <label htmlFor="defaultReferral" className="text-sm text-jungle-text/80 flex-shrink-0">Default Referral Code:</label>
-          <input
-            id="defaultReferral"
-            type="text"
-            value={localDefaultReferral}
-            onChange={(e) => setLocalDefaultReferral(e.target.value)}
-            placeholder="e.g., a312e1e1g1"
-            className="flex-grow bg-jungle-surface text-slate-900 p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none"
-          />
-          <button onClick={handleSaveDefaultReferral} className="bg-jungle-accent text-jungle-deep font-bold py-2 px-4 rounded-md hover:bg-opacity-80">Save</button>
-        </div>
-        <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-2">
+      <h2 className="text-3xl font-display text-jungle-text">Admin Dashboard</h2>
+
+      {/* Tab navigation: one task visible at a time instead of one long
+          scrolling page with nested scroll boxes. */}
+      <div className="flex flex-wrap gap-1 bg-jungle-deep p-1.5 rounded-lg border border-wood-brown">
+        {tabs.map(tab => (
           <button
-            onClick={handleRefreshAllCoverImages}
-            disabled={isRefreshingCovers || isRefreshingAllParses}
-            className="bg-jungle-lime text-jungle-deep font-bold py-2 px-4 rounded-md hover:bg-opacity-80 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2 rounded-md text-sm font-semibold transition-colors ${activeTab === tab.key
+              ? 'bg-jungle-accent text-white'
+              : 'text-jungle-text/60 hover:text-jungle-text hover:bg-white/5'
+              }`}
           >
-            {isRefreshingCovers ? <LoadingSpinner /> : 'Refresh all cover images'}
+            {tab.label}
           </button>
+        ))}
+      </div>
 
-          <button
-            onClick={handleUpdatePrices}
-            disabled={isLoading}
-            className="bg-emerald-500 text-white font-bold py-2 px-4 rounded-md hover:bg-emerald-600 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isLoading ? <LoadingSpinner /> : (
-              <>
-                <RefreshIcon className="w-4 h-4" />
-                Update All Prices
-              </>
+      {activeTab === 'settings' && (
+        <div className="bg-jungle-deep p-4 rounded-md border border-wood-brown/50 space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-jungle-lime">Default Referral</h3>
+            <div className="flex flex-col sm:flex-row gap-2 items-center">
+              <label htmlFor="defaultReferral" className="text-sm text-jungle-text/80 flex-shrink-0">Default Referral Code:</label>
+              <input
+                id="defaultReferral"
+                type="text"
+                value={localDefaultReferral}
+                onChange={(e) => setLocalDefaultReferral(e.target.value)}
+                placeholder="e.g., a312e1e1g1"
+                className="flex-grow bg-jungle-surface text-jungle-text p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none"
+              />
+              <button onClick={handleSaveDefaultReferral} className="bg-jungle-accent text-white font-bold py-2 px-4 rounded-md hover:bg-opacity-80">Save</button>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-jungle-lime">Bulk Data Operations</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <button
+                onClick={handleRefreshAllCoverImages}
+                disabled={isRefreshingCovers || isRefreshingAllParses}
+                className="bg-jungle-lime text-jungle-deep font-bold py-2 px-4 rounded-md hover:bg-opacity-80 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isRefreshingCovers ? <LoadingSpinner /> : 'Refresh all cover images'}
+              </button>
+
+              <button
+                onClick={handleUpdatePrices}
+                disabled={isLoading}
+                className="bg-emerald-500 text-white font-bold py-2 px-4 rounded-md hover:bg-emerald-600 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isLoading ? <LoadingSpinner /> : (
+                  <>
+                    <RefreshIcon className="w-4 h-4" />
+                    Update All Prices
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={handleRefreshAllPartyData}
+                disabled={isRefreshingCovers || isRefreshingAllParses}
+                className="bg-blue-500 text-white font-bold py-2 px-4 rounded-md hover:bg-opacity-80 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isRefreshingAllParses ? <LoadingSpinner /> : 'Refresh ALL Data'}
+              </button>
+            </div>
+            <div className="mt-2">
+              {coverRefreshStatus && (
+                <p className="text-sm text-jungle-text/80">{coverRefreshStatus}</p>
+              )}
+              {refreshAllParsesStatus && (
+                <p className="text-sm text-jungle-text/80">{refreshAllParsesStatus}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'add' && (
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Paste go-out.co party URL" className="flex-grow bg-jungle-deep text-jungle-text p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none" disabled={isLoading} />
+            <button onClick={handleAddParty} disabled={isLoading} className="bg-jungle-lime text-jungle-deep font-bold py-2 px-6 rounded-md hover:bg-opacity-80 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed flex justify-center items-center">
+              {isLoading ? <LoadingSpinner /> : 'Add Party'}
+            </button>
+          </div>
+          <div>
+            <label className="block text-xs text-jungle-text/70 mb-1">Add to Carousels (Optional)</label>
+            {sortedCarousels.length === 0 ? (
+              <p className="text-xs text-jungle-text/60">Create a carousel first to add parties automatically.</p>
+            ) : (
+              <div className="max-h-40 overflow-y-auto border border-wood-brown rounded-md p-2 space-y-1 bg-jungle-deep">
+                {sortedCarousels.map(c => (
+                  <label key={c.id} className="flex items-center gap-2 text-sm text-jungle-text/80 hover:text-jungle-text cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={singleAddCarouselIds.includes(c.id)}
+                      onChange={() => toggleSingleAddCarousel(c.id)}
+                      disabled={isLoading}
+                      className="w-4 h-4"
+                    />
+                    {c.title}
+                  </label>
+                ))}
+              </div>
             )}
-          </button>
-
-          <button
-            onClick={handleRefreshAllPartyData}
-            disabled={isRefreshingCovers || isRefreshingAllParses}
-            className="bg-blue-500 text-white font-bold py-2 px-4 rounded-md hover:bg-opacity-80 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isRefreshingAllParses ? <LoadingSpinner /> : 'Refresh ALL Data'}
-          </button>
-
-        </div>
-        <div className="mt-2">
-          {coverRefreshStatus && (
-            <p className="text-sm text-jungle-text/80">{coverRefreshStatus}</p>
-          )}
-          {refreshAllParsesStatus && (
-            <p className="text-sm text-jungle-text/80">{refreshAllParsesStatus}</p>
-          )}
-        </div>
-
-      </div>
-
-      {/* Add Party Section */}
-      <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Paste go-out.co party URL" className="flex-grow bg-jungle-deep text-slate-900 p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none" disabled={isLoading} />
-          <button onClick={handleAddParty} disabled={isLoading} className="bg-jungle-lime text-jungle-deep font-bold py-2 px-6 rounded-md hover:bg-opacity-80 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed flex justify-center items-center">
-            {isLoading ? <LoadingSpinner /> : 'Add Party'}
-          </button>
-        </div>
-        <div>
-          <label className="block text-xs text-jungle-text/70 mb-1">Add to Carousels (Optional)</label>
-          <select
-            multiple
-            value={singleAddCarouselIds}
-            onChange={handleSingleAddCarouselChange}
-            className="w-full bg-jungle-deep text-slate-900 p-2 rounded-md border border-wood-brown text-sm"
-            disabled={isLoading || sortedCarousels.length === 0}
-            size={Math.min(5, Math.max(1, sortedCarousels.length))}
-          >
-            {sortedCarousels.map(c => (
-              <option key={c.id} value={c.id}>{c.title}</option>
-            ))}
-          </select>
-          {sortedCarousels.length === 0 ? (
-            <p className="text-xs text-jungle-text/60 mt-1">Create a carousel first to add parties automatically.</p>
-          ) : (
-            <p className="text-xs text-jungle-text/60 mt-1">Hold Ctrl (Windows) or Command (Mac) to select multiple carousels.</p>
-          )}
-        </div>
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-xs text-jungle-text/70">Website page tags</label>
-            <span className="text-[11px] text-jungle-text/50">נוסף לתגיות החכמות</span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {pageTagOptions.map((option) => {
-              const isSelected = selectedPageTags.includes(option.tag);
-              return (
-                <button
-                  key={option.tag}
-                  type="button"
-                  onClick={() => toggleSelectedPageTag(option.tag)}
-                  className={`px-3 py-1 rounded-full text-xs border transition-colors ${isSelected
-                    ? 'bg-jungle-accent text-jungle-deep border-jungle-accent'
-                    : 'bg-jungle-deep text-jungle-text/80 border-wood-brown hover:border-jungle-accent hover:text-jungle-accent'
-                    }`}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs text-jungle-text/70">Website page tags</label>
+              <span className="text-[11px] text-jungle-text/50">נוסף לתגיות החכמות</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {pageTagOptions.map((option) => {
+                const isSelected = selectedPageTags.includes(option.tag);
+                return (
+                  <button
+                    key={option.tag}
+                    type="button"
+                    onClick={() => toggleSelectedPageTag(option.tag)}
+                    className={`px-3 py-1 rounded-full text-xs border transition-colors ${isSelected
+                      ? 'bg-jungle-accent text-white border-jungle-accent'
+                      : 'bg-jungle-deep text-jungle-text/80 border-wood-brown hover:border-jungle-accent hover:text-jungle-accent'
+                      }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedPageTags.length > 0 && (
+              <p className="text-[11px] text-jungle-text/60 mt-2">יוחלו גם על האירוע החדש בזמן הוספה.</p>
+            )}
           </div>
-          {selectedPageTags.length > 0 && (
-            <p className="text-[11px] text-jungle-text/60 mt-2">יוחלו גם על האירוע החדש בזמן הוספה.</p>
-          )}
+          {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
         </div>
-        {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
-      </div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {activeTab === 'manage' && (
         <div>
-          <h3 className="text-lg font-semibold mb-2 text-jungle-accent">Manage Active Parties ({activeParties.length})</h3>
           <div className="bg-jungle-deep p-3 rounded-md mb-3 space-y-2 sm:space-y-0 sm:flex sm:justify-between sm:items-center">
             <div className="relative flex-grow">
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <SearchIcon className="w-4 h-4 text-slate-400" />
+                <SearchIcon className="w-4 h-4 text-jungle-text/50" />
               </div>
-              <input type="text" value={partySearchTerm} onChange={e => setPartySearchTerm(e.target.value)} placeholder="Search parties..." className="w-full bg-jungle-surface text-slate-900 p-2 pr-9 rounded-md border border-wood-brown text-sm" />
+              <input type="text" value={partySearchTerm} onChange={e => setPartySearchTerm(e.target.value)} placeholder="Search parties..." className="w-full bg-jungle-surface text-jungle-text p-2 pr-9 rounded-md border border-wood-brown text-sm" />
             </div>
             <div className="flex items-center gap-2 sm:mr-3">
               <span className="text-sm text-jungle-text/70">Sort by:</span>
-              <button onClick={() => setPartySort({ key: 'date', direction: partySort.key === 'date' && partySort.direction === 'asc' ? 'desc' : 'asc' })} className={`px-2 py-1 text-sm rounded ${partySort.key === 'date' ? 'bg-jungle-accent text-jungle-deep' : 'bg-jungle-surface'}`}>Date</button>
-              <button onClick={() => setPartySort({ key: 'name', direction: partySort.key === 'name' && partySort.direction === 'asc' ? 'desc' : 'asc' })} className={`px-2 py-1 text-sm rounded ${partySort.key === 'name' ? 'bg-jungle-accent text-jungle-deep' : 'bg-jungle-surface'}`}>Name</button>
+              <button onClick={() => setPartySort({ key: 'date', direction: partySort.key === 'date' && partySort.direction === 'asc' ? 'desc' : 'asc' })} className={`px-2 py-1 text-sm rounded ${partySort.key === 'date' ? 'bg-jungle-accent text-white' : 'bg-jungle-surface text-jungle-text/70'}`}>Date {sortIndicator('date')}</button>
+              <button onClick={() => setPartySort({ key: 'name', direction: partySort.key === 'name' && partySort.direction === 'asc' ? 'desc' : 'asc' })} className={`px-2 py-1 text-sm rounded ${partySort.key === 'name' ? 'bg-jungle-accent text-white' : 'bg-jungle-surface text-jungle-text/70'}`}>Name {sortIndicator('name')}</button>
             </div>
           </div>
-          <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
             {activePartiesPageItems.map(party => <PartyListItem key={party.id} party={party} />)}
           </div>
           {filteredAndSortedParties.length > ACTIVE_PARTIES_PAGE_SIZE && (
@@ -1130,14 +1263,14 @@ const AdminDashboard: React.FC = () => {
                 <button
                   onClick={() => setActivePartiesPage(p => Math.max(0, p - 1))}
                   disabled={activePartiesPage === 0}
-                  className="px-3 py-1 text-xs bg-jungle-deep hover:bg-jungle-deep/70 text-jungle-text/80 rounded-md border border-wood-brown transition disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-xs bg-jungle-deep hover:bg-white/5 text-jungle-text/70 rounded-md border border-wood-brown transition disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   Prev
                 </button>
                 <button
                   onClick={() => setActivePartiesPage(p => ((p + 1) * ACTIVE_PARTIES_PAGE_SIZE < filteredAndSortedParties.length ? p + 1 : p))}
                   disabled={(activePartiesPage + 1) * ACTIVE_PARTIES_PAGE_SIZE >= filteredAndSortedParties.length}
-                  className="px-3 py-1 text-xs bg-jungle-deep hover:bg-jungle-deep/70 text-jungle-text/80 rounded-md border border-wood-brown transition disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-xs bg-jungle-deep hover:bg-white/5 text-jungle-text/70 rounded-md border border-wood-brown transition disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>
@@ -1146,7 +1279,7 @@ const AdminDashboard: React.FC = () => {
           )}
 
           <div className="mt-4">
-            <button onClick={() => setShowArchived(!showArchived)} className="w-full text-left text-jungle-accent font-semibold p-2 rounded-md hover:bg-jungle-deep flex items-center justify-between">
+            <button onClick={() => setShowArchived(!showArchived)} className="w-full text-left text-jungle-lime font-semibold p-2 rounded-md hover:bg-white/5 flex items-center justify-between">
               <span>Archived Parties ({archivedParties.length})</span>
               <ChevronDownIcon className={`w-5 h-5 transition-transform ${showArchived ? 'rotate-180' : ''}`} />
             </button>
@@ -1157,26 +1290,27 @@ const AdminDashboard: React.FC = () => {
             )}
           </div>
         </div>
+      )}
 
+      {activeTab === 'carousels' && (
         <div>
-          <h3 className="text-lg font-semibold mb-2 text-jungle-accent">Manage Homepage Carousels</h3>
           <form onSubmit={handleCreateCarousel} className="flex gap-2 mb-4">
             <input
               type="text"
               value={newCarouselTitle}
               onChange={e => setNewCarouselTitle(e.target.value)}
               placeholder="New carousel title"
-              className="flex-grow bg-jungle-deep text-slate-900 p-2 rounded-md border border-wood-brown text-sm"
+              className="flex-grow bg-jungle-deep text-jungle-text p-2 rounded-md border border-wood-brown text-sm"
             />
-            <button type="submit" className="bg-jungle-accent text-jungle-deep font-bold px-4 rounded-md text-sm">Create</button>
+            <button type="submit" className="bg-jungle-accent text-white font-bold px-4 rounded-md text-sm">Create</button>
           </form>
-          <div className="space-y-3 max-h-[420px] overflow-y-auto pr-2">
+          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
             {sortedCarousels.map((carousel, index) => {
               const carouselParties = activeParties.filter(p => carousel.partyIds.includes(p.id));
               return (
                 <div
                   key={carousel.id}
-                  className="bg-jungle-deep p-3 rounded-md"
+                  className="bg-jungle-deep p-3 rounded-md border border-wood-brown/50"
                 >
                   {editingCarouselId === carousel.id ? (
                     <div className="flex justify-between items-center mb-2 gap-2">
@@ -1184,29 +1318,29 @@ const AdminDashboard: React.FC = () => {
                         type="text"
                         value={editingCarouselTitle}
                         onChange={e => setEditingCarouselTitle(e.target.value)}
-                        className="flex-grow bg-jungle-surface text-slate-900 p-1 rounded-md border border-wood-brown text-sm"
+                        className="flex-grow bg-jungle-surface text-jungle-text p-1 rounded-md border border-wood-brown text-sm"
                       />
                       <div className="flex gap-2 flex-shrink-0">
-                        <button onClick={() => handleSaveCarousel(carousel.id)} className="text-green-500 hover:text-green-400 text-xs font-bold">SAVE</button>
-                        <button onClick={handleCancelEditCarousel} className="text-slate-500 hover:text-slate-700 text-xs font-bold">CANCEL</button>
+                        <button onClick={() => handleSaveCarousel(carousel.id)} className="text-green-400 hover:text-green-300 text-xs font-bold">SAVE</button>
+                        <button onClick={handleCancelEditCarousel} className="text-jungle-text/60 hover:text-jungle-text text-xs font-bold">CANCEL</button>
                       </div>
                     </div>
                   ) : (
                     <div className="flex justify-between items-center mb-2">
-                      <p className="font-semibold text-slate-900">{carousel.title}</p>
+                      <p className="font-semibold text-jungle-text">{carousel.title}</p>
                       <div className="flex items-center gap-4">
                         <div className="flex items-center">
-                          <button onClick={() => handleMoveCarousel(carousel.id, 'up')} disabled={index === 0} className="text-slate-400 disabled:opacity-30 hover:text-slate-900"><ArrowUpIcon className="w-4 h-4" /></button>
-                          <button onClick={() => handleMoveCarousel(carousel.id, 'down')} disabled={index === sortedCarousels.length - 1} className="text-slate-400 disabled:opacity-30 hover:text-slate-900"><ArrowDownIcon className="w-4 h-4" /></button>
+                          <button onClick={() => handleMoveCarousel(carousel.id, 'up')} disabled={index === 0} className="text-jungle-text/50 disabled:opacity-30 hover:text-jungle-text"><ArrowUpIcon className="w-4 h-4" /></button>
+                          <button onClick={() => handleMoveCarousel(carousel.id, 'down')} disabled={index === sortedCarousels.length - 1} className="text-jungle-text/50 disabled:opacity-30 hover:text-jungle-text"><ArrowDownIcon className="w-4 h-4" /></button>
                         </div>
-                        <button onClick={() => handleEditCarousel(carousel)} className="text-blue-500 hover:text-blue-400 text-xs font-bold">EDIT</button>
-                        <button onClick={() => deleteCarousel(carousel.id)} className="text-red-500 hover:text-red-400 text-xs font-bold">DELETE</button>
+                        <button onClick={() => handleEditCarousel(carousel)} className="text-blue-400 hover:text-blue-300 text-xs font-bold">EDIT</button>
+                        <button onClick={() => deleteCarousel(carousel.id)} className="text-red-400 hover:text-red-300 text-xs font-bold">DELETE</button>
                       </div>
                     </div>
                   )}
                   <div className="mt-2 pt-2 border-t border-wood-brown">
                     <select
-                      className="w-full bg-jungle-surface text-slate-900 p-1 rounded-md border border-wood-brown text-xs mb-2"
+                      className="w-full bg-jungle-surface text-jungle-text p-1 rounded-md border border-wood-brown text-xs mb-2"
                       value={''}
                       onChange={(e) => addPartyToCarousel(carousel.id, e.target.value)}
                     >
@@ -1219,7 +1353,7 @@ const AdminDashboard: React.FC = () => {
                       {carouselParties.map(p => (
                         <div key={p.id} className="flex justify-between items-center bg-jungle-surface p-1 rounded text-xs">
                           <span className="truncate text-jungle-text/80">{p.name}</span>
-                          <button onClick={() => removePartyFromCarousel(carousel.id, p.id)} className="text-red-600 hover:text-red-400 flex-shrink-0 ml-1">✖</button>
+                          <button onClick={() => removePartyFromCarousel(carousel.id, p.id)} className="text-red-400 hover:text-red-300 flex-shrink-0 ml-1">✖</button>
                         </div>
                       ))}
                     </div>
@@ -1229,8 +1363,7 @@ const AdminDashboard: React.FC = () => {
             })}
           </div>
         </div>
-
-      </div>
+      )}
     </div>
   );
 };
