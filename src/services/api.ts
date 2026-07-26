@@ -11,8 +11,8 @@ const JWT_TOKEN_STORAGE = 'jwtAuthToken';
 // --- Helper Functions ---
 
 const getAuthHeader = (): { [key: string]: string } => {
-  if (typeof sessionStorage === 'undefined') return {};
-  const token = sessionStorage.getItem(JWT_TOKEN_STORAGE);
+  if (typeof localStorage === 'undefined') return {};
+  const token = localStorage.getItem(JWT_TOKEN_STORAGE);
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
@@ -321,8 +321,8 @@ export const login = async (password: string): Promise<void> => {
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data.message || 'Login failed');
-  if (data.token && typeof sessionStorage !== 'undefined') {
-    sessionStorage.setItem(JWT_TOKEN_STORAGE, data.token);
+  if (data.token && typeof localStorage !== 'undefined') {
+    localStorage.setItem(JWT_TOKEN_STORAGE, data.token);
   } else if (!data.token) {
     throw new Error('Login response did not include a token.');
   }

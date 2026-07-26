@@ -19,13 +19,13 @@ const AdminShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     const verifyTokenOnLoad = async () => {
-      const token = sessionStorage.getItem(JWT_TOKEN_STORAGE);
+      const token = localStorage.getItem(JWT_TOKEN_STORAGE);
       if (token) {
         try {
           await api.verifyToken();
           setAuthStatus('authenticated');
         } catch {
-          sessionStorage.removeItem(JWT_TOKEN_STORAGE);
+          localStorage.removeItem(JWT_TOKEN_STORAGE);
           setAuthStatus('unauthenticated');
         }
       } else {
