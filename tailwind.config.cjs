@@ -12,20 +12,23 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'jungle-deep': '#0a1a1a',
-        'jungle-surface': '#162b2b',
-        'jungle-accent': '#76c893',
-        'jungle-lime': '#a7ff83',
-        'jungle-text': '#e0f0e3',
-        'wood-brown': '#4d3b2a',
+        // Historically a jungle/green theme; remapped to a clean, neutral,
+        // light "professional dashboard" palette. Class names (jungle-*,
+        // wood-brown) are kept as-is across components so this file is the
+        // single place that controls the admin's look.
+        'jungle-deep': '#f8fafc',   // page background (was near-black)
+        'jungle-surface': '#ffffff', // card/panel background (was dark teal)
+        'jungle-accent': '#2563eb', // primary accent (was mint green)
+        'jungle-lime': '#3b82f6',   // secondary accent / highlights (was lime)
+        'jungle-text': '#334155',   // body text (was light mint)
+        'wood-brown': '#e2e8f0',    // subtle borders (was dark brown)
       },
       fontFamily: {
         sans: ['var(--font-assistant)', '"Assistant"', 'sans-serif'],
-        display: ['var(--font-rubik)', '"Rubik"', 'sans-serif'],
+        display: ['var(--font-assistant)', '"Assistant"', 'sans-serif'],
       },
       boxShadow: {
-        'jungle-glow':
-          '0 0 15px theme("colors.jungle-lime"), 0 0 25px theme("colors.jungle-lime/60")',
+        'jungle-glow': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
       },
     },
   },

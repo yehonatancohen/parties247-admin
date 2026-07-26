@@ -32,30 +32,32 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <div className="max-w-sm mx-auto mt-16">
-      <form onSubmit={handleSubmit} className="bg-jungle-surface p-8 rounded-lg shadow-lg border border-wood-brown/50">
-        <h2 className="text-center text-3xl font-display mb-6 text-white">Admin Access</h2>
-        <div className="mb-4">
-          <label htmlFor="password" className="block text-sm font-medium text-jungle-text/80 mb-2">Password</label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-jungle-deep text-white p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none"
-            disabled={isLoading}
-            aria-describedby="error-message"
-          />
-        </div>
-        {error && <p id="error-message" className="text-red-500 text-sm mb-4 text-center">{error}</p>}
-        <button 
-          type="submit" 
-          className="w-full bg-jungle-lime text-jungle-deep font-bold py-2 px-4 rounded-md hover:bg-opacity-80 transition-colors flex justify-center items-center h-10 disabled:bg-gray-600 disabled:cursor-not-allowed"
-          disabled={isLoading || !password.trim()}
-        >
-          {isLoading ? <LoadingSpinner /> : 'Login'}
-        </button>
-      </form>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+          <h2 className="text-center text-2xl font-display font-bold mb-6 text-slate-900">Admin Access</h2>
+          <div className="mb-4">
+            <label htmlFor="password" className="block text-sm font-medium text-slate-600 mb-2">Password</label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-white text-slate-900 p-2.5 rounded-md border border-slate-300 focus:ring-2 focus:ring-jungle-accent focus:border-jungle-accent focus:outline-none"
+              disabled={isLoading}
+              aria-describedby="error-message"
+            />
+          </div>
+          {error && <p id="error-message" className="text-red-600 text-sm mb-4 text-center">{error}</p>}
+          <button
+            type="submit"
+            className="w-full bg-jungle-accent text-white font-bold py-2.5 px-4 rounded-md hover:opacity-90 transition-opacity flex justify-center items-center h-10 disabled:bg-slate-300 disabled:cursor-not-allowed"
+            disabled={isLoading || !password.trim()}
+          >
+            {isLoading ? <LoadingSpinner /> : 'Login'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };

@@ -23,14 +23,14 @@ const ClonePartyModal: React.FC<{ party: Party; onClose: () => void; onClone: (u
     onClose();
   };
 
-  const inputClass = "w-full bg-jungle-deep text-white p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none";
+  const inputClass = "w-full bg-jungle-deep text-slate-900 p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none";
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
       <div className="bg-jungle-surface rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col border border-wood-brown">
         <div className="p-4 border-b border-wood-brown flex justify-between items-center">
-          <h3 className="text-xl font-display text-white">Clone Party</h3>
-          <button onClick={onClose} className="text-2xl text-jungle-text/70 hover:text-white">&times;</button>
+          <h3 className="text-xl font-display text-slate-900">Clone Party</h3>
+          <button onClick={onClose} className="text-2xl text-jungle-text/70 hover:text-slate-900">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
           <div className="bg-blue-500/10 border border-blue-500/30 p-3 rounded-md text-sm text-blue-200 mb-4">
@@ -123,7 +123,7 @@ const TagInput: React.FC<{ tags: string[]; onTagsChange: (tags: string[]) => voi
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Add a tag and press Enter"
-        className="w-full bg-jungle-deep text-white p-1 rounded-md border border-wood-brown text-sm"
+        className="w-full bg-jungle-deep text-slate-900 p-1 rounded-md border border-wood-brown text-sm"
       />
     </div>
   );
@@ -187,14 +187,14 @@ const EditPartyModal: React.FC<{ party: Party; onClose: () => void; onSave: (upd
     onClose();
   };
 
-  const inputClass = "w-full bg-jungle-deep text-white p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none";
+  const inputClass = "w-full bg-jungle-deep text-slate-900 p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none";
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
       <div className="bg-jungle-surface rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col border border-wood-brown">
         <div className="p-4 border-b border-wood-brown flex justify-between items-center">
-          <h3 className="text-xl font-display text-white">Edit Party</h3>
-          <button onClick={onClose} className="text-2xl text-jungle-text/70 hover:text-white">&times;</button>
+          <h3 className="text-xl font-display text-slate-900">Edit Party</h3>
+          <button onClick={onClose} className="text-2xl text-jungle-text/70 hover:text-slate-900">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
           <div>
@@ -260,7 +260,7 @@ const EditPartyModal: React.FC<{ party: Party; onClose: () => void; onSave: (upd
               onChange={togglePromotion}
               className="w-4 h-4"
             />
-            <label htmlFor="isPromotion" className="text-sm text-white font-semibold">
+            <label htmlFor="isPromotion" className="text-sm text-slate-900 font-semibold">
               Is Promotion Party (Hidden from site search)
             </label>
           </div>
@@ -845,7 +845,7 @@ const AdminDashboard: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         {/* Party Info */}
         <div className="flex-grow min-w-0 w-full">
-          <p className="font-semibold text-white text-lg truncate m-0">{party.name}</p>
+          <p className="font-semibold text-slate-900 text-lg truncate m-0">{party.name}</p>
           <p className="text-sm text-jungle-text/60 m-0">{party.location.name} - {new Date(party.date).toLocaleDateString('he-IL')}</p>
           <div className="flex items-center gap-2 mt-2">
             <label htmlFor={`ref-${party.id}`} className="text-xs text-jungle-text/60 whitespace-nowrap">Ref:</label>
@@ -855,7 +855,7 @@ const AdminDashboard: React.FC = () => {
               value={party.referralCode || ''}
               onChange={(e) => updateParty({ ...party, referralCode: e.target.value })}
               placeholder="Default"
-              className="w-full max-w-[150px] bg-jungle-surface text-white p-1 rounded-sm border border-wood-brown text-xs"
+              className="w-full max-w-[150px] bg-jungle-surface text-slate-900 p-1 rounded-sm border border-wood-brown text-xs"
             />
           </div>
         </div>
@@ -883,7 +883,7 @@ const AdminDashboard: React.FC = () => {
 
           <button
             onClick={() => handleCopyPartyLink(party)}
-            className="flex flex-col items-center justify-center p-2 rounded-md bg-white/5 text-white hover:bg-white/10 border border-white/10 transition-all h-14"
+            className="flex flex-col items-center justify-center p-2 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-all h-14"
             title="Copy Link"
           >
             <ShareIcon className="w-4 h-4" />
@@ -932,7 +932,7 @@ const AdminDashboard: React.FC = () => {
             onClick={() => toggleLastTicketsTag(party)}
             className={`px-3 py-1 rounded-full text-xs border transition-colors ${party.tags.includes(LAST_TICKETS_TAG)
               ? 'bg-red-500 text-white border-red-400 shadow-lg shadow-red-500/30'
-              : 'bg-jungle-surface text-jungle-text/80 border-wood-brown hover:border-red-400 hover:text-white'
+              : 'bg-jungle-surface text-jungle-text/80 border-wood-brown hover:border-red-400 hover:text-red-600'
               }`}
           >
             כרטיסים אחרונים
@@ -945,7 +945,7 @@ const AdminDashboard: React.FC = () => {
                 onClick={() => handleTogglePartyPageTag(party, option.tag)}
                 className={`px-3 py-1 rounded-full text-xs border transition-colors ${isActive
                   ? 'bg-jungle-accent text-jungle-deep border-jungle-accent'
-                  : 'bg-jungle-surface text-jungle-text/80 border-wood-brown hover:border-jungle-accent hover:text-white'
+                  : 'bg-jungle-surface text-jungle-text/80 border-wood-brown hover:border-jungle-accent hover:text-jungle-accent'
                   }`}
               >
                 {option.label}
@@ -970,7 +970,7 @@ const AdminDashboard: React.FC = () => {
   );
 
   return (
-    <div className="bg-jungle-surface p-6 rounded-lg shadow-lg max-w-7xl mx-auto space-y-8">
+    <div className="bg-jungle-surface p-6 rounded-lg shadow-sm border border-wood-brown w-full space-y-8">
       {editingParty && (
         <EditPartyModal
           party={editingParty}
@@ -985,7 +985,7 @@ const AdminDashboard: React.FC = () => {
           onClone={handleClonePartySave}
         />
       )}
-      <h2 className="text-3xl font-display mb-6 text-white">Admin Dashboard</h2>
+      <h2 className="text-3xl font-display mb-6 text-slate-900">Admin Dashboard</h2>
 
       {/* Settings Section */}
       <div className="bg-jungle-deep p-4 rounded-md border border-wood-brown/50">
@@ -998,7 +998,7 @@ const AdminDashboard: React.FC = () => {
             value={localDefaultReferral}
             onChange={(e) => setLocalDefaultReferral(e.target.value)}
             placeholder="e.g., a312e1e1g1"
-            className="flex-grow bg-jungle-surface text-white p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none"
+            className="flex-grow bg-jungle-surface text-slate-900 p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none"
           />
           <button onClick={handleSaveDefaultReferral} className="bg-jungle-accent text-jungle-deep font-bold py-2 px-4 rounded-md hover:bg-opacity-80">Save</button>
         </div>
@@ -1047,7 +1047,7 @@ const AdminDashboard: React.FC = () => {
       {/* Add Party Section */}
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row gap-2">
-          <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Paste go-out.co party URL" className="flex-grow bg-jungle-deep text-white p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none" disabled={isLoading} />
+          <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Paste go-out.co party URL" className="flex-grow bg-jungle-deep text-slate-900 p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none" disabled={isLoading} />
           <button onClick={handleAddParty} disabled={isLoading} className="bg-jungle-lime text-jungle-deep font-bold py-2 px-6 rounded-md hover:bg-opacity-80 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed flex justify-center items-center">
             {isLoading ? <LoadingSpinner /> : 'Add Party'}
           </button>
@@ -1058,7 +1058,7 @@ const AdminDashboard: React.FC = () => {
             multiple
             value={singleAddCarouselIds}
             onChange={handleSingleAddCarouselChange}
-            className="w-full bg-jungle-deep text-white p-2 rounded-md border border-wood-brown text-sm"
+            className="w-full bg-jungle-deep text-slate-900 p-2 rounded-md border border-wood-brown text-sm"
             disabled={isLoading || sortedCarousels.length === 0}
             size={Math.min(5, Math.max(1, sortedCarousels.length))}
           >
@@ -1087,7 +1087,7 @@ const AdminDashboard: React.FC = () => {
                   onClick={() => toggleSelectedPageTag(option.tag)}
                   className={`px-3 py-1 rounded-full text-xs border transition-colors ${isSelected
                     ? 'bg-jungle-accent text-jungle-deep border-jungle-accent'
-                    : 'bg-jungle-deep text-jungle-text/80 border-wood-brown hover:border-jungle-accent hover:text-white'
+                    : 'bg-jungle-deep text-jungle-text/80 border-wood-brown hover:border-jungle-accent hover:text-jungle-accent'
                     }`}
                 >
                   {option.label}
@@ -1108,9 +1108,9 @@ const AdminDashboard: React.FC = () => {
           <div className="bg-jungle-deep p-3 rounded-md mb-3 space-y-2 sm:space-y-0 sm:flex sm:justify-between sm:items-center">
             <div className="relative flex-grow">
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <SearchIcon className="w-4 h-4 text-gray-400" />
+                <SearchIcon className="w-4 h-4 text-slate-400" />
               </div>
-              <input type="text" value={partySearchTerm} onChange={e => setPartySearchTerm(e.target.value)} placeholder="Search parties..." className="w-full bg-jungle-surface text-white p-2 pr-9 rounded-md border border-wood-brown text-sm" />
+              <input type="text" value={partySearchTerm} onChange={e => setPartySearchTerm(e.target.value)} placeholder="Search parties..." className="w-full bg-jungle-surface text-slate-900 p-2 pr-9 rounded-md border border-wood-brown text-sm" />
             </div>
             <div className="flex items-center gap-2 sm:mr-3">
               <span className="text-sm text-jungle-text/70">Sort by:</span>
@@ -1166,7 +1166,7 @@ const AdminDashboard: React.FC = () => {
               value={newCarouselTitle}
               onChange={e => setNewCarouselTitle(e.target.value)}
               placeholder="New carousel title"
-              className="flex-grow bg-jungle-deep text-white p-2 rounded-md border border-wood-brown text-sm"
+              className="flex-grow bg-jungle-deep text-slate-900 p-2 rounded-md border border-wood-brown text-sm"
             />
             <button type="submit" className="bg-jungle-accent text-jungle-deep font-bold px-4 rounded-md text-sm">Create</button>
           </form>
@@ -1184,20 +1184,20 @@ const AdminDashboard: React.FC = () => {
                         type="text"
                         value={editingCarouselTitle}
                         onChange={e => setEditingCarouselTitle(e.target.value)}
-                        className="flex-grow bg-jungle-surface text-white p-1 rounded-md border border-wood-brown text-sm"
+                        className="flex-grow bg-jungle-surface text-slate-900 p-1 rounded-md border border-wood-brown text-sm"
                       />
                       <div className="flex gap-2 flex-shrink-0">
                         <button onClick={() => handleSaveCarousel(carousel.id)} className="text-green-500 hover:text-green-400 text-xs font-bold">SAVE</button>
-                        <button onClick={handleCancelEditCarousel} className="text-gray-500 hover:text-gray-400 text-xs font-bold">CANCEL</button>
+                        <button onClick={handleCancelEditCarousel} className="text-slate-500 hover:text-slate-700 text-xs font-bold">CANCEL</button>
                       </div>
                     </div>
                   ) : (
                     <div className="flex justify-between items-center mb-2">
-                      <p className="font-semibold text-white">{carousel.title}</p>
+                      <p className="font-semibold text-slate-900">{carousel.title}</p>
                       <div className="flex items-center gap-4">
                         <div className="flex items-center">
-                          <button onClick={() => handleMoveCarousel(carousel.id, 'up')} disabled={index === 0} className="text-gray-400 disabled:opacity-30 hover:text-white"><ArrowUpIcon className="w-4 h-4" /></button>
-                          <button onClick={() => handleMoveCarousel(carousel.id, 'down')} disabled={index === sortedCarousels.length - 1} className="text-gray-400 disabled:opacity-30 hover:text-white"><ArrowDownIcon className="w-4 h-4" /></button>
+                          <button onClick={() => handleMoveCarousel(carousel.id, 'up')} disabled={index === 0} className="text-slate-400 disabled:opacity-30 hover:text-slate-900"><ArrowUpIcon className="w-4 h-4" /></button>
+                          <button onClick={() => handleMoveCarousel(carousel.id, 'down')} disabled={index === sortedCarousels.length - 1} className="text-slate-400 disabled:opacity-30 hover:text-slate-900"><ArrowDownIcon className="w-4 h-4" /></button>
                         </div>
                         <button onClick={() => handleEditCarousel(carousel)} className="text-blue-500 hover:text-blue-400 text-xs font-bold">EDIT</button>
                         <button onClick={() => deleteCarousel(carousel.id)} className="text-red-500 hover:text-red-400 text-xs font-bold">DELETE</button>
@@ -1206,7 +1206,7 @@ const AdminDashboard: React.FC = () => {
                   )}
                   <div className="mt-2 pt-2 border-t border-wood-brown">
                     <select
-                      className="w-full bg-jungle-surface text-white p-1 rounded-md border border-wood-brown text-xs mb-2"
+                      className="w-full bg-jungle-surface text-slate-900 p-1 rounded-md border border-wood-brown text-xs mb-2"
                       value={''}
                       onChange={(e) => addPartyToCarousel(carousel.id, e.target.value)}
                     >

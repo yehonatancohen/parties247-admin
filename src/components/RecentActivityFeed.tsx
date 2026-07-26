@@ -136,23 +136,23 @@ const RecentActivityFeed: React.FC = () => {
         }
     };
 
-    const selectClass = "bg-white/5 border border-white/10 text-gray-300 text-xs rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-jungle-accent";
+    const selectClass = "bg-white border border-slate-300 text-slate-700 text-xs rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-jungle-accent";
 
     return (
-        <div className="bg-gray-900/40 border border-white/5 rounded-2xl p-6 h-full">
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 h-full shadow-sm">
             <div className="flex flex-col gap-3 mb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <h3 className="text-xl text-white font-bold flex items-center gap-2">
+                    <h3 className="text-xl text-slate-900 font-bold flex items-center gap-2">
                         📡 פעילות אחרונה
                     </h3>
-                    <div className="flex bg-white/5 rounded-lg p-1 border border-white/10 self-start">
+                    <div className="flex bg-slate-100 rounded-lg p-1 border border-slate-200 self-start">
                         {RANGE_FILTERS.map(({ key, label }) => (
                             <button
                                 key={key}
                                 onClick={() => setRange(key)}
                                 className={`px-3 py-1 text-xs rounded-md transition-all ${range === key
-                                    ? 'bg-white/10 text-white font-medium shadow-sm'
-                                    : 'text-gray-400 hover:text-white'
+                                    ? 'bg-white text-slate-900 font-medium shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-900'
                                     }`}
                             >
                                 {label}
@@ -161,14 +161,14 @@ const RecentActivityFeed: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex gap-1 bg-white/5 rounded-lg p-1 border border-white/10">
+                    <div className="flex gap-1 bg-slate-100 rounded-lg p-1 border border-slate-200">
                         {TYPE_FILTERS.map(({ key, label }) => (
                             <button
                                 key={key}
                                 onClick={() => setFilter(key)}
                                 className={`px-3 py-1 text-xs rounded-md transition-all ${filter === key
-                                    ? 'bg-white/10 text-white font-medium shadow-sm'
-                                    : 'text-gray-400 hover:text-white'
+                                    ? 'bg-white text-slate-900 font-medium shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-900'
                                     }`}
                             >
                                 {label}
@@ -187,15 +187,15 @@ const RecentActivityFeed: React.FC = () => {
             {isLoading ? (
                 <div className="p-6 flex justify-center"><LoadingSpinner /></div>
             ) : events.length === 0 ? (
-                <div className="p-6 text-center text-gray-500">אין פעילות התואמת את הסינון</div>
+                <div className="p-6 text-center text-slate-400">אין פעילות התואמת את הסינון</div>
             ) : (
                 <>
                     <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                         {events.map((event) => (
-                            <div key={event.id} className="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/5 hover:bg-white/10 transition-colors">
-                                <div className={`mt-1 p-2 rounded-full ${event.type === 'purchase' ? 'bg-jungle-lime/20 text-jungle-lime' :
-                                    event.type === 'view' ? 'bg-blue-500/20 text-blue-500' :
-                                        'bg-purple-500/20 text-purple-500'
+                            <div key={event.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors">
+                                <div className={`mt-1 p-2 rounded-full ${event.type === 'purchase' ? 'bg-jungle-lime/10 text-jungle-lime' :
+                                    event.type === 'view' ? 'bg-blue-500/10 text-blue-500' :
+                                        'bg-purple-500/10 text-purple-500'
                                     }`}>
                                     {event.type === 'purchase' && <TicketIcon className="w-4 h-4" />}
                                     {event.type === 'view' && <EyeIcon className="w-4 h-4" />}
@@ -203,19 +203,19 @@ const RecentActivityFeed: React.FC = () => {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start">
-                                        <p className="text-sm font-medium text-gray-200 truncate">
+                                        <p className="text-sm font-medium text-slate-700 truncate">
                                             {event.type === 'purchase' ? 'רכישת כרטיס' :
                                                 event.type === 'view' ? 'צפייה במסיבה' : 'ביקור באתר'}
                                         </p>
-                                        <span className="text-xs text-gray-500 font-mono whitespace-nowrap">
+                                        <span className="text-xs text-slate-400 font-mono whitespace-nowrap">
                                             {new Date(event.timestamp).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
                                     {event.partyName && (
-                                        <p className="text-xs text-blue-300 mt-0.5 truncate">{event.partyName}</p>
+                                        <p className="text-xs text-blue-600 mt-0.5 truncate">{event.partyName}</p>
                                     )}
                                     {event.details && (
-                                        <p className="text-xs text-gray-500 mt-1">{event.details}</p>
+                                        <p className="text-xs text-slate-400 mt-1">{event.details}</p>
                                     )}
                                 </div>
                             </div>
@@ -226,7 +226,7 @@ const RecentActivityFeed: React.FC = () => {
                             <button
                                 onClick={handleLoadMore}
                                 disabled={isLoadingMore}
-                                className="px-4 py-1.5 text-xs bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg border border-white/10 transition disabled:opacity-50"
+                                className="px-4 py-1.5 text-xs bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg border border-slate-200 transition disabled:opacity-50"
                             >
                                 {isLoadingMore ? <LoadingSpinner size="sm" /> : 'טען עוד'}
                             </button>

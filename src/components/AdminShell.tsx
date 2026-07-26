@@ -7,11 +7,17 @@ import * as api from '@/services/api';
 
 const JWT_TOKEN_STORAGE = 'jwtAuthToken';
 
+const navItems = [
+  { href: '/', end: true, label: 'ניהול קטלוג' },
+  { href: '/analytics', end: false, label: 'אנליטיקס' },
+  { href: '/audit-log', end: false, label: 'יומן פעולות' },
+];
+
 const getNavLinkClass = (isActive: boolean) =>
-  `px-4 py-2 rounded-lg font-semibold transition-colors ${
+  `shrink-0 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
     isActive
-      ? 'bg-jungle-accent text-jungle-deep shadow-jungle-glow'
-      : 'text-white/80 hover:text-white hover:bg-jungle-accent/20'
+      ? 'bg-jungle-accent text-white'
+      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
   }`;
 
 const AdminShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -36,7 +42,7 @@ const AdminShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }, []);
 
   if (authStatus === 'checking') {
-    return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
+    return <div className="flex justify-center items-center min-h-screen"><LoadingSpinner /></div>;
   }
 
   if (authStatus !== 'authenticated') {
@@ -44,19 +50,27 @@ const AdminShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   return (
-    <div className="py-8 space-y-6 max-w-7xl mx-auto px-4">
-      <div className="bg-jungle-surface/60 border border-wood-brown/40 rounded-xl shadow-lg p-3 flex flex-wrap gap-2">
-        <NavLink href="/" end className={({ isActive }) => getNavLinkClass(isActive)}>
-          ניהול קטלוג
-        </NavLink>
-        <NavLink href="/analytics" className={({ isActive }) => getNavLinkClass(isActive)}>
-          אנליטיקס
-        </NavLink>
-        <NavLink href="/audit-log" className={({ isActive }) => getNavLinkClass(isActive)}>
-          יומן פעולות
-        </NavLink>
-      </div>
-      <div className="mt-4">{children}</div>
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 gap-4">
+            <span className="font-display text-lg font-bold text-slate-900 shrink-0">Parties 24/7 · Admin</span>
+            <nav className="flex items-center gap-1 overflow-x-auto">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  end={item.end}
+                  className={({ isActive }) => getNavLinkClass(isActive)}
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </nav>
+          </div>
+        </div>
+      </header>
+      <main className="w-full px-4 sm:px-6 lg:px-8 py-6">{children}</main>
     </div>
   );
 };
