@@ -1,4 +1,4 @@
-import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse } from '../data/types';
+import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord } from '../data/types';
 import { SeoPageConfig } from '../lib/seoparties';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -593,6 +593,24 @@ export const getVisitorAnalytics = async (
     console.error("Critical error in getVisitorAnalytics:", error);
     throw error;
   }
+};
+
+export const getPartySales = async (): Promise<PartySalesRecord[]> => {
+  const response = await fetch(`${API_URL}/admin/analytics/sales`, {
+    headers: { ...getAuthHeader() },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || 'Failed to fetch sales analytics');
+  const rows = Array.isArray(data.data) ? data.data : [];
+  return rows.map((item: any) => ({
+    goOutEventId: typeof item?.goOutEventId === 'string' ? item.goOutEventId : '',
+    partyId: typeof item?.partyId === 'string' ? item.partyId : null,
+    eventName: typeof item?.eventName === 'string' ? item.eventName : '',
+    confirmedTickets: normalizeCount(item?.confirmedTickets),
+    pendingTickets: normalizeCount(item?.pendingTickets),
+    totalRevenue: typeof item?.totalRevenue === 'number' ? item.totalRevenue : 0,
+    totalTicketsSold: normalizeCount(item?.totalTicketsSold),
+  }));
 };
 
 export const getAuditLog = async (

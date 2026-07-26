@@ -108,6 +108,16 @@ export interface BreakdownItem {
   percent: number;
 }
 
+export interface PartySalesRecord {
+  goOutEventId: string;
+  partyId: string | null;
+  eventName: string;
+  confirmedTickets: number;
+  pendingTickets: number;
+  totalRevenue: number;
+  totalTicketsSold: number;
+}
+
 export interface AnalyticsSummary {
   generatedAt: string;
   uniqueVisitors24h: number;

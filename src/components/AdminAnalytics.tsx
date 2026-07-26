@@ -2,8 +2,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 import RecentActivityFeed from './RecentActivityFeed';
-import { getAnalyticsSummary, getDetailedAnalytics, getVisitorAnalytics } from '../services/api';
-import { AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, VisitorAnalyticsResponse, VisitorRecord, BreakdownItem } from '../data/types';
+import { getAnalyticsSummary, getDetailedAnalytics, getVisitorAnalytics, getPartySales } from '../services/api';
+import { AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, VisitorAnalyticsResponse, VisitorRecord, BreakdownItem, PartySalesRecord } from '../data/types';
 import { FireIcon, TicketIcon, MegaphoneIcon } from './Icons';
 
 // --- Helpers ---
@@ -12,6 +12,14 @@ const formatNumber = (num: number) => new Intl.NumberFormat('en-US', { notation:
 const calculateCTR = (views: number, clicks: number) => {
   if (views === 0) return 0;
   return (clicks / views) * 100;
+};
+
+// Real conversion: actual tickets sold (from the GoOut sales tracker, joined
+// by goOutEventId) divided by clicks-to-GoOut — vs. calculateCTR above,
+// which is just views->clicks and says nothing about actual purchases.
+const calculateRealConversion = (ticketsSold: number, redirects: number) => {
+  if (redirects === 0) return 0;
+  return (ticketsSold / redirects) * 100;
 };
 
 // --- CSV export ---
@@ -272,6 +280,7 @@ type AnalyticsTab = 'overview' | 'visitors' | 'parties';
 const AdminAnalytics: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [salesByPartyId, setSalesByPartyId] = useState<Record<string, PartySalesRecord>>({});
   const [detailedData, setDetailedData] = useState<DetailedAnalyticsResponse | null>(null);
   const [visitorData, setVisitorData] = useState<VisitorAnalyticsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -326,8 +335,23 @@ const AdminAnalytics: React.FC = () => {
     }
   };
 
+  const fetchPartySales = async () => {
+    try {
+      const rows = await getPartySales();
+      const byPartyId: Record<string, PartySalesRecord> = {};
+      for (const row of rows) {
+        if (row.partyId) byPartyId[row.partyId] = row;
+      }
+      setSalesByPartyId(byPartyId);
+    } catch (err) {
+      // Non-fatal — the rest of the dashboard still works without real sales data.
+      console.error('Failed to load party sales', err);
+    }
+  };
+
   useEffect(() => {
     fetchSummary().catch(() => { });
+    fetchPartySales().catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -915,11 +939,16 @@ const AdminAnalytics: React.FC = () => {
                     <th className="text-right py-2 px-3">צפיות</th>
                     <th className="text-right py-2 px-3">קליקים</th>
                     <th className="text-right py-2 px-3">CTR</th>
+                    <th className="text-right py-2 px-3">כרטיסים שנמכרו</th>
+                    <th className="text-right py-2 px-3">המרה אמיתית</th>
                   </tr>
                 </thead>
                 <tbody>
                   {partyTablePageRows.map(party => {
                     const ctr = calculateCTR(party.views, party.redirects);
+                    const sales = salesByPartyId[party.partyId];
+                    const ticketsSold = sales?.totalTicketsSold ?? null;
+                    const realConversion = ticketsSold !== null ? calculateRealConversion(ticketsSold, party.redirects) : null;
                     return (
                       <tr key={party.partyId} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                         <td className="py-2 px-3 text-gray-200 font-medium truncate max-w-[200px]">{party.name}</td>
@@ -934,12 +963,24 @@ const AdminAnalytics: React.FC = () => {
                             {ctr.toFixed(1)}%
                           </span>
                         </td>
+                        <td className="py-2 px-3 text-jungle-accent font-mono">
+                          {ticketsSold !== null ? ticketsSold : '—'}
+                        </td>
+                        <td className="py-2 px-3">
+                          {realConversion !== null ? (
+                            <span className={`font-mono font-bold ${realConversion > 5 ? 'text-green-400' : realConversion > 2 ? 'text-yellow-400' : 'text-red-400'}`}>
+                              {realConversion.toFixed(1)}%
+                            </span>
+                          ) : (
+                            <span className="text-gray-600 text-xs">אין נתון</span>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
                   {partyTablePageRows.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-6 text-center text-gray-500">לא נמצאו אירועים תואמים</td>
+                      <td colSpan={8} className="py-6 text-center text-gray-500">לא נמצאו אירועים תואמים</td>
                     </tr>
                   )}
                 </tbody>
