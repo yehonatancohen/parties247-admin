@@ -121,6 +121,27 @@ export interface PartySalesRecord {
   totalTicketsSold: number;
 }
 
+export interface FunnelStage {
+  views: number;
+  redirects: number;
+  purchases: number;
+  revenue: number;
+  viewToRedirectRate: number | null;
+  redirectToPurchaseRate: number | null;
+}
+
+export interface PartyFunnelRow extends FunnelStage {
+  partyId: string;
+  name: string | null;
+  slug: string | null;
+  date: string | null;
+}
+
+export interface FunnelResponse {
+  siteWide: FunnelStage & { windowDays: number };
+  byParty: PartyFunnelRow[];
+}
+
 export interface AnalyticsSummary {
   generatedAt: string;
   uniqueVisitors24h: number;
@@ -145,7 +166,7 @@ export interface DetailedAnalyticsResponse {
 
 export interface RecentActivityEvent {
   id: string;
-  type: 'view' | 'purchase' | 'visit';
+  type: 'view' | 'redirect' | 'goout_purchase' | 'visit';
   partyName?: string;
   partyId?: string;
   timestamp: string;
@@ -161,7 +182,7 @@ export interface RecentActivityResponse {
 }
 
 export interface RecentActivityFilters {
-  types?: Array<'view' | 'purchase' | 'visit'>;
+  types?: Array<'view' | 'redirect' | 'goout_purchase' | 'visit'>;
   devices?: string[];
   sources?: string[];
   limit?: number;

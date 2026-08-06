@@ -20,7 +20,14 @@ const EyeIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
-type ActivityFilter = 'all' | 'purchase' | 'view' | 'visit';
+// A click that sends the visitor to GoOut to buy — not a completed purchase.
+const RedirectIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+    </svg>
+);
+
+type ActivityFilter = 'all' | 'redirect' | 'goout_purchase' | 'view' | 'visit';
 type DeviceFilter = 'all' | 'mobile' | 'desktop' | 'tablet';
 type SourceFilter = 'all' | 'direct' | 'organic_search' | 'social' | 'referral';
 type RangeFilter = '24h' | '7d' | '30d';
@@ -35,7 +42,8 @@ const RANGE_TO_HOURS: Record<RangeFilter, number> = {
 
 const TYPE_FILTERS: { key: ActivityFilter; label: string }[] = [
     { key: 'all', label: 'הכל' },
-    { key: 'purchase', label: 'רכישות' },
+    { key: 'goout_purchase', label: 'רכישות ב-GoOut' },
+    { key: 'redirect', label: 'קליקים לרכישה' },
     { key: 'view', label: 'צפיות' },
     { key: 'visit', label: 'ביקורים' },
 ];
@@ -193,19 +201,22 @@ const RecentActivityFeed: React.FC = () => {
                     <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                         {events.map((event) => (
                             <div key={event.id} className="flex items-start gap-3 p-3 bg-jungle-deep rounded-lg border border-wood-brown/50 hover:border-wood-brown transition-colors">
-                                <div className={`mt-1 p-2 rounded-full ${event.type === 'purchase' ? 'bg-jungle-lime/10 text-jungle-lime' :
-                                    event.type === 'view' ? 'bg-blue-500/10 text-blue-400' :
-                                        'bg-purple-500/10 text-purple-400'
+                                <div className={`mt-1 p-2 rounded-full ${event.type === 'goout_purchase' ? 'bg-yellow-400/10 text-yellow-400' :
+                                    event.type === 'redirect' ? 'bg-jungle-lime/10 text-jungle-lime' :
+                                        event.type === 'view' ? 'bg-blue-500/10 text-blue-400' :
+                                            'bg-purple-500/10 text-purple-400'
                                     }`}>
-                                    {event.type === 'purchase' && <TicketIcon className="w-4 h-4" />}
+                                    {event.type === 'goout_purchase' && <TicketIcon className="w-4 h-4" />}
+                                    {event.type === 'redirect' && <RedirectIcon className="w-4 h-4" />}
                                     {event.type === 'view' && <EyeIcon className="w-4 h-4" />}
                                     {event.type === 'visit' && <GlobeIcon className="w-4 h-4" />}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start">
                                         <p className="text-sm font-medium text-jungle-text truncate">
-                                            {event.type === 'purchase' ? 'רכישת כרטיס' :
-                                                event.type === 'view' ? 'צפייה במסיבה' : 'ביקור באתר'}
+                                            {event.type === 'goout_purchase' ? '🎉 רכישה ב-GoOut' :
+                                                event.type === 'redirect' ? 'קליק לרכישה ב-GoOut' :
+                                                    event.type === 'view' ? 'צפייה במסיבה' : 'ביקור באתר'}
                                         </p>
                                         <span className="text-xs text-jungle-text/50 font-mono whitespace-nowrap">
                                             {new Date(event.timestamp).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}

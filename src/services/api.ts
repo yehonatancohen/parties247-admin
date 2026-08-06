@@ -1,4 +1,4 @@
-import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord } from '../data/types';
+import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse } from '../data/types';
 import { SeoPageConfig } from '../lib/seoparties';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -614,6 +614,38 @@ export const getPartySales = async (): Promise<PartySalesRecord[]> => {
     totalRevenue: typeof item?.totalRevenue === 'number' ? item.totalRevenue : 0,
     totalTicketsSold: normalizeCount(item?.totalTicketsSold),
   }));
+};
+
+const normalizeFunnelStage = (item: any) => ({
+  views: normalizeCount(item?.views),
+  redirects: normalizeCount(item?.redirects),
+  purchases: normalizeCount(item?.purchases),
+  revenue: typeof item?.revenue === 'number' ? item.revenue : 0,
+  viewToRedirectRate: typeof item?.viewToRedirectRate === 'number' ? item.viewToRedirectRate : null,
+  redirectToPurchaseRate: typeof item?.redirectToPurchaseRate === 'number' ? item.redirectToPurchaseRate : null,
+});
+
+export const getPartyFunnel = async (days: number = 30): Promise<FunnelResponse> => {
+  const params = new URLSearchParams({ days: String(days) });
+  const response = await fetch(`${API_URL}/admin/analytics/funnel?${params.toString()}`, {
+    headers: { ...getAuthHeader() },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || 'Failed to fetch funnel analytics');
+  const byParty = Array.isArray(data.byParty) ? data.byParty : [];
+  return {
+    siteWide: {
+      ...normalizeFunnelStage(data.siteWide),
+      windowDays: normalizeCount(data.siteWide?.windowDays) || days,
+    },
+    byParty: byParty.map((item: any) => ({
+      ...normalizeFunnelStage(item),
+      partyId: typeof item?.partyId === 'string' ? item.partyId : '',
+      name: typeof item?.name === 'string' ? item.name : null,
+      slug: typeof item?.slug === 'string' ? item.slug : null,
+      date: typeof item?.date === 'string' ? item.date : null,
+    })),
+  };
 };
 
 export const getAuditLog = async (
