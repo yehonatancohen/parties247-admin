@@ -111,6 +111,9 @@ export interface BreakdownItem {
 export interface PartySalesRecord {
   goOutEventId: string;
   partyId: string | null;
+  partyName: string | null;
+  partySlug: string | null;
+  partyDate: string | null;
   eventName: string;
   confirmedTickets: number;
   pendingTickets: number;

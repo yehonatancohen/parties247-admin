@@ -605,6 +605,9 @@ export const getPartySales = async (): Promise<PartySalesRecord[]> => {
   return rows.map((item: any) => ({
     goOutEventId: typeof item?.goOutEventId === 'string' ? item.goOutEventId : '',
     partyId: typeof item?.partyId === 'string' ? item.partyId : null,
+    partyName: typeof item?.partyName === 'string' ? item.partyName : null,
+    partySlug: typeof item?.partySlug === 'string' ? item.partySlug : null,
+    partyDate: typeof item?.partyDate === 'string' ? item.partyDate : null,
     eventName: typeof item?.eventName === 'string' ? item.eventName : '',
     confirmedTickets: normalizeCount(item?.confirmedTickets),
     pendingTickets: normalizeCount(item?.pendingTickets),

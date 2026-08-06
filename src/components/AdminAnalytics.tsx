@@ -281,6 +281,7 @@ const AdminAnalytics: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [salesByPartyId, setSalesByPartyId] = useState<Record<string, PartySalesRecord>>({});
+  const [salesRows, setSalesRows] = useState<PartySalesRecord[]>([]);
   const [detailedData, setDetailedData] = useState<DetailedAnalyticsResponse | null>(null);
   const [visitorData, setVisitorData] = useState<VisitorAnalyticsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -343,6 +344,7 @@ const AdminAnalytics: React.FC = () => {
         if (row.partyId) byPartyId[row.partyId] = row;
       }
       setSalesByPartyId(byPartyId);
+      setSalesRows(rows);
     } catch (err) {
       // Non-fatal — the rest of the dashboard still works without real sales data.
       console.error('Failed to load party sales', err);
@@ -403,6 +405,17 @@ const AdminAnalytics: React.FC = () => {
     const start = partyTablePage * PARTY_TABLE_PAGE_SIZE;
     return filteredPartyTableRows.slice(start, start + PARTY_TABLE_PAGE_SIZE);
   }, [filteredPartyTableRows, partyTablePage]);
+
+  // Independent of the "live parties" table above: GoOut sales keep coming in
+  // around and after an event's date, but the live-parties list drops a party
+  // the moment its date passes — so most real sales data would never surface
+  // if this only joined onto that list. Sourced directly from
+  // /api/admin/analytics/sales instead.
+  const realSalesRows = useMemo(() => {
+    return salesRows
+      .filter(row => row.confirmedTickets > 0 || row.totalTicketsSold > 0)
+      .sort((a, b) => b.totalTicketsSold - a.totalTicketsSold);
+  }, [salesRows]);
 
   // Process chart data from API
   const chartData = useMemo(() => {
@@ -1010,6 +1023,56 @@ const AdminAnalytics: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Real GoOut Sales - includes events whose date has already passed,
+              which the live-parties table above excludes entirely */}
+          {realSalesRows.length > 0 && (
+            <div className="bg-jungle-surface border border-wood-brown rounded-2xl shadow-lg p-6">
+              <h3 className="text-lg text-jungle-text font-bold flex items-center gap-2 mb-1">
+                🎟️ מכירות אמיתיות מ-GoOut
+              </h3>
+              <p className="text-xs text-jungle-text/50 mb-4">
+                כולל אירועים שכבר עברו — נתוני מכירות ממשיכים להתעדכן גם אחרי תאריך האירוע
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-jungle-text/50 text-xs border-b border-wood-brown/50">
+                      <th className="text-right py-2 px-3">אירוע</th>
+                      <th className="text-right py-2 px-3">תאריך</th>
+                      <th className="text-right py-2 px-3">מאושרים</th>
+                      <th className="text-right py-2 px-3">ממתינים</th>
+                      <th className="text-right py-2 px-3">סה"כ כרטיסים</th>
+                      <th className="text-right py-2 px-3">הכנסות</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {realSalesRows.map(row => (
+                      <tr key={row.goOutEventId} className="border-b border-wood-brown/50 hover:bg-white/5 transition-colors">
+                        <td className="py-2 px-3 text-jungle-text font-medium truncate max-w-[240px]">
+                          {row.partyName || row.eventName || '—'}
+                          {!row.partyId && (
+                            <span className="ms-2 text-[10px] text-jungle-text/40" title="לא נמצאה התאמה לאירוע בקטלוג">
+                              (ללא קישור לקטלוג)
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-jungle-text/60 text-xs whitespace-nowrap">
+                          {row.partyDate ? new Date(row.partyDate).toLocaleDateString('he-IL') : '-'}
+                        </td>
+                        <td className="py-2 px-3 text-jungle-accent font-mono">{row.confirmedTickets}</td>
+                        <td className="py-2 px-3 text-jungle-text/60 font-mono">{row.pendingTickets}</td>
+                        <td className="py-2 px-3 text-jungle-accent font-mono font-bold">{row.totalTicketsSold}</td>
+                        <td className="py-2 px-3 text-jungle-text/60 font-mono">
+                          {row.totalRevenue > 0 ? `₪${row.totalRevenue.toFixed(0)}` : 'אין נתון'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Best Converting vs Needs Improvement */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
