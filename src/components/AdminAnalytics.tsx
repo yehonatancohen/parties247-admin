@@ -42,6 +42,7 @@ const downloadCsv = (filename: string, headers: string[], rows: (string | number
 // exposes a current snapshot, not a windowed delta).
 type MergedPartyRow = {
   partyId: string;
+  accountId: string | null;
   name: string | null;
   slug: string | null;
   date: string | null;
@@ -84,6 +85,7 @@ const exportPartiesToCsv = (parties: MergedPartyRow[]) => {
   const rows = parties.map(p => [
     p.name || '',
     p.slug || '',
+    p.accountId || '',
     p.date ? new Date(p.date).toLocaleDateString('he-IL') : '',
     p.isActive ? 'פעיל' : 'לא פעיל',
     p.views,
@@ -97,7 +99,7 @@ const exportPartiesToCsv = (parties: MergedPartyRow[]) => {
   ]);
   downloadCsv(
     `parties-performance-${new Date().toISOString().slice(0, 10)}.csv`,
-    ['שם', 'Slug', 'תאריך', 'סטטוס', 'צפיות באתר', 'קליקים ל-GoOut', 'CTR', 'צפיות ב-GoOut (מצטבר)', 'רכישות ב-GoOut', 'הכנסות', 'מחזור אמיתי ב-GoOut (מצטבר)', 'כרטיסים סה"כ'],
+    ['שם', 'Slug', 'חשבון', 'תאריך', 'סטטוס', 'צפיות באתר', 'קליקים ל-GoOut', 'CTR', 'צפיות ב-GoOut (מצטבר)', 'רכישות ב-GoOut', 'הכנסות', 'מחזור אמיתי ב-GoOut (מצטבר)', 'כרטיסים סה"כ'],
     rows,
   );
 };
@@ -359,6 +361,7 @@ const AdminAnalytics: React.FC = () => {
   const [partyTablePage, setPartyTablePage] = useState(0);
   const PARTY_TABLE_PAGE_SIZE = 20;
   const [partyStatusFilter, setPartyStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [partyAccountFilter, setPartyAccountFilter] = useState<'all' | 'account1' | 'account2'>('all');
   const [partySortKey, setPartySortKey] = useState<PartySortKey>('views');
   const [partySortDir, setPartySortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -487,6 +490,7 @@ const AdminAnalytics: React.FC = () => {
         const sales = salesByPartyId[row.partyId];
         return {
           partyId: row.partyId,
+          accountId: row.accountId ?? sales?.accountId ?? null,
           name: row.name,
           slug: row.slug,
           date: row.date,
@@ -509,15 +513,16 @@ const AdminAnalytics: React.FC = () => {
     const filtered = mergedPartyRows.filter(p => {
       if (partyStatusFilter === 'active' && !p.isActive) return false;
       if (partyStatusFilter === 'inactive' && p.isActive) return false;
+      if (partyAccountFilter !== 'all' && p.accountId !== partyAccountFilter) return false;
       if (!term) return true;
       return (p.name || '').toLowerCase().includes(term) || (p.slug || '').toLowerCase().includes(term);
     });
     return sortMergedPartyRows(filtered, partySortKey, partySortDir);
-  }, [mergedPartyRows, partyTableSearch, partyStatusFilter, partySortKey, partySortDir]);
+  }, [mergedPartyRows, partyTableSearch, partyStatusFilter, partyAccountFilter, partySortKey, partySortDir]);
 
   useEffect(() => {
     setPartyTablePage(0);
-  }, [partyTableSearch, partyStatusFilter, partySortKey, partySortDir]);
+  }, [partyTableSearch, partyStatusFilter, partyAccountFilter, partySortKey, partySortDir]);
 
   const partyTablePageRows = useMemo(() => {
     const start = partyTablePage * PARTY_TABLE_PAGE_SIZE;
@@ -1158,23 +1163,43 @@ const AdminAnalytics: React.FC = () => {
               צפייה ← קליק ל-GoOut ← צפיות ב-GoOut (מצטבר) ← רכישה מאושרת ב-GoOut · כולל אירועים שכבר עברו · עמודות "מצטבר" אינן מוגבלות לטווח הימים שנבחר
             </p>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <div className="flex bg-jungle-deep rounded-lg p-1 border border-wood-brown self-start">
-                {([
-                  ['all', 'הכל'],
-                  ['active', 'פעילים'],
-                  ['inactive', 'לא פעילים'],
-                ] as const).map(([value, label]) => (
-                  <button
-                    key={value}
-                    onClick={() => setPartyStatusFilter(value)}
-                    className={`px-3 py-1 text-xs rounded-md transition-all ${partyStatusFilter === value
-                      ? 'bg-jungle-accent text-white font-medium shadow-sm'
-                      : 'text-jungle-text/60 hover:text-jungle-text'
-                      }`}
-                  >
-                    {label}
-                  </button>
-                ))}
+              <div className="flex flex-wrap gap-2">
+                <div className="flex bg-jungle-deep rounded-lg p-1 border border-wood-brown self-start">
+                  {([
+                    ['all', 'הכל'],
+                    ['active', 'פעילים'],
+                    ['inactive', 'לא פעילים'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      onClick={() => setPartyStatusFilter(value)}
+                      className={`px-3 py-1 text-xs rounded-md transition-all ${partyStatusFilter === value
+                        ? 'bg-jungle-accent text-white font-medium shadow-sm'
+                        : 'text-jungle-text/60 hover:text-jungle-text'
+                        }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex bg-jungle-deep rounded-lg p-1 border border-wood-brown self-start">
+                  {([
+                    ['all', 'כל החשבונות'],
+                    ['account1', 'account1'],
+                    ['account2', 'account2'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      onClick={() => setPartyAccountFilter(value)}
+                      className={`px-3 py-1 text-xs rounded-md transition-all ${partyAccountFilter === value
+                        ? 'bg-jungle-accent text-white font-medium shadow-sm'
+                        : 'text-jungle-text/60 hover:text-jungle-text'
+                        }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -1202,6 +1227,7 @@ const AdminAnalytics: React.FC = () => {
                     <tr className="text-jungle-text/50 text-xs border-b border-wood-brown/50">
                       <SortableTh label="שם" sortKey="name" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
                       <th className="text-right py-2 px-3">Slug</th>
+                      <th className="text-right py-2 px-3">חשבון</th>
                       <SortableTh label="תאריך" sortKey="date" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
                       <th className="text-right py-2 px-3">סטטוס</th>
                       <SortableTh label="צפיות באתר" sortKey="views" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
@@ -1220,6 +1246,15 @@ const AdminAnalytics: React.FC = () => {
                       <tr key={row.partyId} className="border-b border-wood-brown/50 hover:bg-white/5 transition-colors">
                         <td className="py-2 px-3 text-jungle-text font-medium truncate max-w-[200px]">{row.name || '—'}</td>
                         <td className="py-2 px-3 text-jungle-text/50 font-mono text-xs">{row.slug || '—'}</td>
+                        <td className="py-2 px-3">
+                          {row.accountId ? (
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${row.accountId === 'account1' ? 'bg-blue-500/10 text-blue-400' : 'bg-orange-500/10 text-orange-400'}`}>
+                              {row.accountId}
+                            </span>
+                          ) : (
+                            <span className="text-jungle-text/40 text-xs">—</span>
+                          )}
+                        </td>
                         <td className="py-2 px-3 text-jungle-text/60 text-xs whitespace-nowrap">
                           {row.date ? new Date(row.date).toLocaleDateString('he-IL') : '-'}
                         </td>
@@ -1253,7 +1288,7 @@ const AdminAnalytics: React.FC = () => {
                     ))}
                     {partyTablePageRows.length === 0 && (
                       <tr>
-                        <td colSpan={12} className="py-6 text-center text-jungle-text/50">לא נמצאו אירועים תואמים</td>
+                        <td colSpan={13} className="py-6 text-center text-jungle-text/50">לא נמצאו אירועים תואמים</td>
                       </tr>
                     )}
                   </tbody>
