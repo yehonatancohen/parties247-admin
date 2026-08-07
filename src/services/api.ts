@@ -644,7 +644,7 @@ export const getPartyFunnel = async (days: number = 30): Promise<FunnelResponse>
     byParty: byParty.map((item: any) => ({
       ...normalizeFunnelStage(item),
       partyId: typeof item?.partyId === 'string' ? item.partyId : '',
-      accountId: typeof item?.accountId === 'string' ? item.accountId : null,
+      accountIds: Array.isArray(item?.accountIds) ? item.accountIds.filter((a: unknown) => typeof a === 'string') : [],
       name: typeof item?.name === 'string' ? item.name : null,
       slug: typeof item?.slug === 'string' ? item.slug : null,
       date: typeof item?.date === 'string' ? item.date : null,

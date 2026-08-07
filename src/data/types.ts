@@ -150,7 +150,13 @@ export interface FunnelStage {
 
 export interface PartyFunnelRow extends FunnelStage {
   partyId: string;
-  accountId: string | null;
+  // Every GoOut account tracking this event's sales. Usually one entry, but two
+  // when the same event is visible to/tracked by both accounts -- in that case
+  // the site's own referral should always be account1 (see goout-scraper's
+  // sales_tracker.py _reconcile_dual_account_referrals), but revenue/purchases
+  // above can still include account2's real sales, so don't assume a single
+  // "owning" account when rendering this row.
+  accountIds: string[];
   name: string | null;
   slug: string | null;
   date: string | null;

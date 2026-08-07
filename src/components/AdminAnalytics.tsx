@@ -42,7 +42,11 @@ const downloadCsv = (filename: string, headers: string[], rows: (string | number
 // exposes a current snapshot, not a windowed delta).
 type MergedPartyRow = {
   partyId: string;
-  accountId: string | null;
+  // Every account tracking this event's sales -- more than one entry means the
+  // same event is visible to both accounts (site referral should be account1,
+  // but revenue can still include account2's real sales -- don't collapse this
+  // to a single value, that's the bug that hid a wrong-account revenue mismatch).
+  accountIds: string[];
   name: string | null;
   slug: string | null;
   date: string | null;
@@ -85,7 +89,7 @@ const exportPartiesToCsv = (parties: MergedPartyRow[]) => {
   const rows = parties.map(p => [
     p.name || '',
     p.slug || '',
-    p.accountId || '',
+    p.accountIds.join('+') || '',
     p.date ? new Date(p.date).toLocaleDateString('he-IL') : '',
     p.isActive ? 'פעיל' : 'לא פעיל',
     p.views,
@@ -488,9 +492,12 @@ const AdminAnalytics: React.FC = () => {
       )
       .map(row => {
         const sales = salesByPartyId[row.partyId];
+        const accountIds = row.accountIds.length > 0
+          ? row.accountIds
+          : (sales?.accountId ? [sales.accountId] : []);
         return {
           partyId: row.partyId,
-          accountId: row.accountId ?? sales?.accountId ?? null,
+          accountIds,
           name: row.name,
           slug: row.slug,
           date: row.date,
@@ -513,7 +520,7 @@ const AdminAnalytics: React.FC = () => {
     const filtered = mergedPartyRows.filter(p => {
       if (partyStatusFilter === 'active' && !p.isActive) return false;
       if (partyStatusFilter === 'inactive' && p.isActive) return false;
-      if (partyAccountFilter !== 'all' && p.accountId !== partyAccountFilter) return false;
+      if (partyAccountFilter !== 'all' && !p.accountIds.includes(partyAccountFilter)) return false;
       if (!term) return true;
       return (p.name || '').toLowerCase().includes(term) || (p.slug || '').toLowerCase().includes(term);
     });
@@ -1247,10 +1254,18 @@ const AdminAnalytics: React.FC = () => {
                         <td className="py-2 px-3 text-jungle-text font-medium truncate max-w-[200px]">{row.name || '—'}</td>
                         <td className="py-2 px-3 text-jungle-text/50 font-mono text-xs">{row.slug || '—'}</td>
                         <td className="py-2 px-3">
-                          {row.accountId ? (
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${row.accountId === 'account1' ? 'bg-blue-500/10 text-blue-400' : 'bg-orange-500/10 text-orange-400'}`}>
-                              {row.accountId}
-                            </span>
+                          {row.accountIds.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {row.accountIds.map(id => (
+                                <span
+                                  key={id}
+                                  className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${id === 'account1' ? 'bg-blue-500/10 text-blue-400' : 'bg-orange-500/10 text-orange-400'}`}
+                                  title={row.accountIds.length > 1 ? 'אירוע זה במעקב תחת שני החשבונות' : undefined}
+                                >
+                                  {id}
+                                </span>
+                              ))}
+                            </div>
                           ) : (
                             <span className="text-jungle-text/40 text-xs">—</span>
                           )}
