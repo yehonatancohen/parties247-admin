@@ -442,9 +442,17 @@ const AdminAnalytics: React.FC = () => {
   const funnelPartyRows = useMemo(() => {
     if (!funnel) return [];
     return funnel.byParty
-      .filter(row => row.views > 0 || row.redirects > 0 || row.purchases > 0)
+      .filter(row => {
+        if (row.views > 0 || row.redirects > 0 || row.purchases > 0) return true;
+        // Also keep events with zero site-side activity (view/redirect/purchase
+        // rollups can be windowed/cleared) but real GoOut data available —
+        // otherwise this table silently drops exactly the rows the new
+        // real-views/revenue columns exist to show.
+        const sales = salesByPartyId[row.partyId];
+        return sales != null && (sales.realViews != null || sales.realTotalRevenue != null);
+      })
       .sort((a, b) => b.purchases - a.purchases || b.redirects - a.redirects || b.views - a.views);
-  }, [funnel]);
+  }, [funnel, salesByPartyId]);
 
   // Process chart data from API
   const chartData = useMemo(() => {
@@ -1162,10 +1170,14 @@ const AdminAnalytics: React.FC = () => {
                       <th className="text-right py-2 px-3">רכישות ב-GoOut</th>
                       <th className="text-right py-2 px-3">קליק→רכישה</th>
                       <th className="text-right py-2 px-3">הכנסות</th>
+                      <th className="text-right py-2 px-3">צפיות ב-GoOut</th>
+                      <th className="text-right py-2 px-3">הכנסה אמיתית (GoOut)</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {funnelPartyRows.map(row => (
+                    {funnelPartyRows.map(row => {
+                      const sales = salesByPartyId[row.partyId];
+                      return (
                       <tr key={row.partyId} className="border-b border-wood-brown/50 hover:bg-white/5 transition-colors">
                         <td className="py-2 px-3 text-jungle-text font-medium truncate max-w-[220px]">
                           {row.name || '—'}
@@ -1185,8 +1197,15 @@ const AdminAnalytics: React.FC = () => {
                         <td className="py-2 px-3 text-jungle-text/60 font-mono">
                           {row.revenue > 0 ? `₪${row.revenue.toFixed(0)}` : 'אין נתון'}
                         </td>
+                        <td className="py-2 px-3 text-purple-400 font-mono">
+                          {sales?.realViews ?? '—'}
+                        </td>
+                        <td className="py-2 px-3 text-jungle-lime font-mono">
+                          {sales?.realTotalRevenue != null ? `₪${sales.realTotalRevenue.toFixed(0)}` : '—'}
+                        </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
