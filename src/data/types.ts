@@ -110,6 +110,9 @@ export interface BreakdownItem {
 
 export interface PartySalesRecord {
   goOutEventId: string;
+  // Which GoOut account this event was tracked under (account1: flat ₪25/ticket
+  // revenue rule, account2: 6% of gross revenue) — see sales_tracker.py.
+  accountId: string | null;
   partyId: string | null;
   partyName: string | null;
   partySlug: string | null;
@@ -147,6 +150,7 @@ export interface FunnelStage {
 
 export interface PartyFunnelRow extends FunnelStage {
   partyId: string;
+  accountId: string | null;
   name: string | null;
   slug: string | null;
   date: string | null;

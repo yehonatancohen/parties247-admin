@@ -604,6 +604,7 @@ export const getPartySales = async (): Promise<PartySalesRecord[]> => {
   const rows = Array.isArray(data.data) ? data.data : [];
   return rows.map((item: any) => ({
     goOutEventId: typeof item?.goOutEventId === 'string' ? item.goOutEventId : '',
+    accountId: typeof item?.accountId === 'string' ? item.accountId : null,
     partyId: typeof item?.partyId === 'string' ? item.partyId : null,
     partyName: typeof item?.partyName === 'string' ? item.partyName : null,
     partySlug: typeof item?.partySlug === 'string' ? item.partySlug : null,
@@ -643,6 +644,7 @@ export const getPartyFunnel = async (days: number = 30): Promise<FunnelResponse>
     byParty: byParty.map((item: any) => ({
       ...normalizeFunnelStage(item),
       partyId: typeof item?.partyId === 'string' ? item.partyId : '',
+      accountId: typeof item?.accountId === 'string' ? item.accountId : null,
       name: typeof item?.name === 'string' ? item.name : null,
       slug: typeof item?.slug === 'string' ? item.slug : null,
       date: typeof item?.date === 'string' ? item.date : null,
