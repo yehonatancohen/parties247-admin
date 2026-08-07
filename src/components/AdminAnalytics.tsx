@@ -1039,6 +1039,8 @@ const AdminAnalytics: React.FC = () => {
                     <th className="text-right py-2 px-3">CTR</th>
                     <th className="text-right py-2 px-3">כרטיסים שנמכרו</th>
                     <th className="text-right py-2 px-3">המרה אמיתית</th>
+                    <th className="text-right py-2 px-3">צפיות ב-GoOut</th>
+                    <th className="text-right py-2 px-3">הכנסה אמיתית (GoOut)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1073,12 +1075,18 @@ const AdminAnalytics: React.FC = () => {
                             <span className="text-jungle-text/60 text-xs">אין נתון</span>
                           )}
                         </td>
+                        <td className="py-2 px-3 text-purple-400 font-mono">
+                          {sales?.realViews ?? '—'}
+                        </td>
+                        <td className="py-2 px-3 text-jungle-lime font-mono">
+                          {sales?.realTotalRevenue != null ? `₪${sales.realTotalRevenue.toFixed(0)}` : '—'}
+                        </td>
                       </tr>
                     );
                   })}
                   {partyTablePageRows.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="py-6 text-center text-jungle-text/50">לא נמצאו אירועים תואמים</td>
+                      <td colSpan={10} className="py-6 text-center text-jungle-text/50">לא נמצאו אירועים תואמים</td>
                     </tr>
                   )}
                 </tbody>
@@ -1203,6 +1211,8 @@ const AdminAnalytics: React.FC = () => {
                       <th className="text-right py-2 px-3">ממתינים</th>
                       <th className="text-right py-2 px-3">סה"כ כרטיסים</th>
                       <th className="text-right py-2 px-3">הכנסות</th>
+                      <th className="text-right py-2 px-3">צפיות ב-GoOut</th>
+                      <th className="text-right py-2 px-3">הכנסה אמיתית (GoOut)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1216,6 +1226,10 @@ const AdminAnalytics: React.FC = () => {
                         <td className="py-2 px-3 text-jungle-accent font-mono font-bold">{row.totalTicketsSold}</td>
                         <td className="py-2 px-3 text-jungle-text/60 font-mono">
                           {row.totalRevenue > 0 ? `₪${row.totalRevenue.toFixed(0)}` : 'אין נתון'}
+                        </td>
+                        <td className="py-2 px-3 text-purple-400 font-mono">{row.realViews ?? '—'}</td>
+                        <td className="py-2 px-3 text-jungle-lime font-mono">
+                          {row.realTotalRevenue != null ? `₪${row.realTotalRevenue.toFixed(0)}` : '—'}
                         </td>
                       </tr>
                     ))}

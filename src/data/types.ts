@@ -119,6 +119,15 @@ export interface PartySalesRecord {
   pendingTickets: number;
   totalRevenue: number;
   totalTicketsSold: number;
+  // Real per-event data scraped directly from GoOut's own panel (views, revenue,
+  // per-date sales, buyer count) — separate from totalRevenue/totalTicketsSold
+  // above, which are our own delta-tracked bookkeeping. null/0 until a given
+  // event's first successful GoOut stats scrape (see goout-scraper/cf-relay).
+  realViews: number | null;
+  realTotalRevenue: number | null;
+  realOwnRevenue: number | null;
+  realSalesPerDate: Record<string, number>;
+  realBuyerCount: number;
 }
 
 export interface FunnelStage {
