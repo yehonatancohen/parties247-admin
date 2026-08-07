@@ -14,14 +14,6 @@ const calculateCTR = (views: number, clicks: number) => {
   return (clicks / views) * 100;
 };
 
-// Real conversion: actual tickets sold (from the GoOut sales tracker, joined
-// by goOutEventId) divided by clicks-to-GoOut — vs. calculateCTR above,
-// which is just views->clicks and says nothing about actual purchases.
-const calculateRealConversion = (ticketsSold: number, redirects: number) => {
-  if (redirects === 0) return 0;
-  return (ticketsSold / redirects) * 100;
-};
-
 // --- CSV export ---
 const csvEscape = (value: unknown): string => {
   const str = value === null || value === undefined ? '' : String(value);
@@ -45,18 +37,67 @@ const downloadCsv = (filename: string, headers: string[], rows: (string | number
   URL.revokeObjectURL(url);
 };
 
-const exportPartiesToCsv = (parties: AnalyticsSummaryParty[]) => {
+// A single row per party combining site analytics (windowed by the funnel's
+// day selector) with real GoOut data (lifetime/cumulative — GoOut only
+// exposes a current snapshot, not a windowed delta).
+type MergedPartyRow = {
+  partyId: string;
+  name: string | null;
+  slug: string | null;
+  date: string | null;
+  isActive: boolean;
+  views: number;
+  redirects: number;
+  viewToRedirectRate: number | null;
+  realGoOutViews: number | null;
+  purchases: number;
+  redirectToPurchaseRate: number | null;
+  revenue: number;
+  realGoOutRevenue: number | null;
+  totalTicketsSold: number | null;
+};
+
+type PartySortKey =
+  | 'name' | 'date' | 'views' | 'redirects' | 'realGoOutViews'
+  | 'purchases' | 'revenue' | 'realGoOutRevenue' | 'totalTicketsSold';
+
+const sortMergedPartyRows = (rows: MergedPartyRow[], key: PartySortKey, dir: 'asc' | 'desc'): MergedPartyRow[] => {
+  const factor = dir === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    if (key === 'name') {
+      return factor * (a.name || '').localeCompare(b.name || '', 'he');
+    }
+    if (key === 'date') {
+      const av = a.date ? new Date(a.date).getTime() : -Infinity;
+      const bv = b.date ? new Date(b.date).getTime() : -Infinity;
+      return factor * (av - bv);
+    }
+    const av = a[key];
+    const bv = b[key];
+    const an = av === null || av === undefined ? -Infinity : av;
+    const bn = bv === null || bv === undefined ? -Infinity : bv;
+    return factor * ((an as number) - (bn as number));
+  });
+};
+
+const exportPartiesToCsv = (parties: MergedPartyRow[]) => {
   const rows = parties.map(p => [
-    p.name,
-    p.slug,
+    p.name || '',
+    p.slug || '',
     p.date ? new Date(p.date).toLocaleDateString('he-IL') : '',
+    p.isActive ? 'פעיל' : 'לא פעיל',
     p.views,
     p.redirects,
     calculateCTR(p.views, p.redirects).toFixed(1) + '%',
+    p.realGoOutViews ?? '',
+    p.purchases,
+    p.revenue.toFixed(2),
+    p.realGoOutRevenue ?? '',
+    p.totalTicketsSold ?? '',
   ]);
   downloadCsv(
     `parties-performance-${new Date().toISOString().slice(0, 10)}.csv`,
-    ['שם', 'Slug', 'תאריך', 'צפיות', 'קליקים', 'CTR'],
+    ['שם', 'Slug', 'תאריך', 'סטטוס', 'צפיות באתר', 'קליקים ל-GoOut', 'CTR', 'צפיות ב-GoOut (מצטבר)', 'רכישות ב-GoOut', 'הכנסות', 'מחזור אמיתי ב-GoOut (מצטבר)', 'כרטיסים סה"כ'],
     rows,
   );
 };
@@ -112,6 +153,25 @@ const KpiCard = ({ title, value, subtext, icon: Icon, colorClass }: { title: str
       <Icon className="w-6 h-6" />
     </div>
   </div>
+);
+
+// Clickable table header cell for the merged parties table's client-side sort.
+const SortableTh = <K extends string>({ label, sortKey, current, dir, onSort }: {
+  label: string;
+  sortKey: K;
+  current: K;
+  dir: 'asc' | 'desc';
+  onSort: (key: K) => void;
+}) => (
+  <th className="text-right py-2 px-3">
+    <button
+      onClick={() => onSort(sortKey)}
+      className={`inline-flex items-center gap-1 hover:text-jungle-text transition-colors whitespace-nowrap ${current === sortKey ? 'text-jungle-accent' : ''}`}
+    >
+      {label}
+      {current === sortKey && <span className="text-[10px]">{dir === 'asc' ? '▲' : '▼'}</span>}
+    </button>
+  </th>
 );
 
 // 2. Bar Chart Row
@@ -298,6 +358,9 @@ const AdminAnalytics: React.FC = () => {
   const [partyTableSearch, setPartyTableSearch] = useState('');
   const [partyTablePage, setPartyTablePage] = useState(0);
   const PARTY_TABLE_PAGE_SIZE = 20;
+  const [partyStatusFilter, setPartyStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [partySortKey, setPartySortKey] = useState<PartySortKey>('views');
+  const [partySortDir, setPartySortDir] = useState<'asc' | 'desc'>('desc');
 
   const fetchSummary = async () => {
     setIsLoading(true);
@@ -407,23 +470,68 @@ const AdminAnalytics: React.FC = () => {
     };
   }, [summary]);
 
+  // One row per party, combining everything we know: site analytics (windowed
+  // by the funnel day selector), GoOut confirmed purchases/revenue (also
+  // windowed), and real GoOut views/revenue (cumulative — GoOut only exposes
+  // a current snapshot, not a windowed delta, so those two columns don't move
+  // with the day selector the way the others do).
+  const mergedPartyRows: MergedPartyRow[] = useMemo(() => {
+    if (!funnel) return [];
+    const now = Date.now();
+    return funnel.byParty
+      .filter(row =>
+        row.views > 0 || row.redirects > 0 || row.purchases > 0
+        || row.realGoOutViews != null || row.realGoOutRevenue != null,
+      )
+      .map(row => {
+        const sales = salesByPartyId[row.partyId];
+        return {
+          partyId: row.partyId,
+          name: row.name,
+          slug: row.slug,
+          date: row.date,
+          isActive: row.date ? new Date(row.date).getTime() >= now : false,
+          views: row.views,
+          redirects: row.redirects,
+          viewToRedirectRate: row.viewToRedirectRate,
+          realGoOutViews: row.realGoOutViews,
+          purchases: row.purchases,
+          redirectToPurchaseRate: row.redirectToPurchaseRate,
+          revenue: row.revenue,
+          realGoOutRevenue: row.realGoOutRevenue,
+          totalTicketsSold: sales?.totalTicketsSold ?? null,
+        };
+      });
+  }, [funnel, salesByPartyId]);
+
   const filteredPartyTableRows = useMemo(() => {
-    if (!stats) return [];
     const term = partyTableSearch.trim().toLowerCase();
-    if (!term) return stats.sortedByViews;
-    return stats.sortedByViews.filter(p =>
-      p.name.toLowerCase().includes(term) || p.slug.toLowerCase().includes(term)
-    );
-  }, [stats, partyTableSearch]);
+    const filtered = mergedPartyRows.filter(p => {
+      if (partyStatusFilter === 'active' && !p.isActive) return false;
+      if (partyStatusFilter === 'inactive' && p.isActive) return false;
+      if (!term) return true;
+      return (p.name || '').toLowerCase().includes(term) || (p.slug || '').toLowerCase().includes(term);
+    });
+    return sortMergedPartyRows(filtered, partySortKey, partySortDir);
+  }, [mergedPartyRows, partyTableSearch, partyStatusFilter, partySortKey, partySortDir]);
 
   useEffect(() => {
     setPartyTablePage(0);
-  }, [partyTableSearch]);
+  }, [partyTableSearch, partyStatusFilter, partySortKey, partySortDir]);
 
   const partyTablePageRows = useMemo(() => {
     const start = partyTablePage * PARTY_TABLE_PAGE_SIZE;
     return filteredPartyTableRows.slice(start, start + PARTY_TABLE_PAGE_SIZE);
   }, [filteredPartyTableRows, partyTablePage]);
+
+  const togglePartySort = (key: PartySortKey) => {
+    if (partySortKey === key) {
+      setPartySortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setPartySortKey(key);
+      setPartySortDir('desc');
+    }
+  };
 
   // Independent of the "live parties" table above: GoOut sales keep coming in
   // around and after an event's date, but the live-parties list drops a party
@@ -438,16 +546,6 @@ const AdminAnalytics: React.FC = () => {
       .filter(row => !row.partyId && (row.confirmedTickets > 0 || row.totalTicketsSold > 0))
       .sort((a, b) => b.totalTicketsSold - a.totalTicketsSold);
   }, [salesRows]);
-
-  const funnelPartyRows = useMemo(() => {
-    if (!funnel) return [];
-    return funnel.byParty
-      .filter(row =>
-        row.views > 0 || row.redirects > 0 || row.purchases > 0
-        || row.realGoOutViews != null || row.realGoOutRevenue != null,
-      )
-      .sort((a, b) => b.purchases - a.purchases || b.redirects - a.redirects || b.views - a.views);
-  }, [funnel]);
 
   // Process chart data from API
   const chartData = useMemo(() => {
@@ -579,47 +677,55 @@ const AdminAnalytics: React.FC = () => {
             {isLoadingFunnel || !funnel ? (
               <div className="p-6 flex justify-center"><LoadingSpinner /></div>
             ) : (
-              <div className="flex flex-col sm:flex-row items-stretch gap-2">
-                <div className="flex-1 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-center">
-                  <p className="text-xs text-jungle-text/60 mb-1">👁️ צפיות באירועים</p>
-                  <p className="text-3xl font-bold text-blue-400 font-mono">{formatNumber(funnel.siteWide.views)}</p>
+              <>
+                <div className="flex flex-col sm:flex-row items-stretch gap-2">
+                  <div className="flex-1 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-center">
+                    <p className="text-xs text-jungle-text/60 mb-1">👁️ צפיות באירועים</p>
+                    <p className="text-3xl font-bold text-blue-400 font-mono">{formatNumber(funnel.siteWide.views)}</p>
+                  </div>
+                  <div className="flex flex-col items-center justify-center px-2 text-jungle-text/40">
+                    <span className="text-lg">←</span>
+                    <span className="text-xs font-mono whitespace-nowrap">
+                      {funnel.siteWide.viewToRedirectRate !== null ? `${funnel.siteWide.viewToRedirectRate.toFixed(1)}%` : '—'}
+                    </span>
+                  </div>
+                  <div className="flex-1 bg-jungle-lime/10 border border-jungle-lime/20 rounded-xl p-4 text-center">
+                    <p className="text-xs text-jungle-text/60 mb-1">🔗 קליקים ל-GoOut</p>
+                    <p className="text-3xl font-bold text-jungle-lime font-mono">{formatNumber(funnel.siteWide.redirects)}</p>
+                  </div>
+                  <div className="flex flex-col items-center justify-center px-2 text-jungle-text/40">
+                    <span className="text-lg">←</span>
+                  </div>
+                  <div className="flex-1 bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 text-center">
+                    <p className="text-xs text-jungle-text/60 mb-1">👁️ צפיות ב-GoOut (מצטבר)</p>
+                    <p className="text-3xl font-bold text-purple-400 font-mono">{formatNumber(funnel.siteWide.realGoOutViews ?? 0)}</p>
+                  </div>
+                  <div className="flex flex-col items-center justify-center px-2 text-jungle-text/40">
+                    <span className="text-lg">←</span>
+                    <span className="text-xs font-mono whitespace-nowrap">
+                      {funnel.siteWide.redirectToPurchaseRate !== null ? `${funnel.siteWide.redirectToPurchaseRate.toFixed(1)}%` : '—'}
+                    </span>
+                  </div>
+                  <div className="flex-1 bg-yellow-400/10 border border-yellow-400/20 rounded-xl p-4 text-center">
+                    <p className="text-xs text-jungle-text/60 mb-1">🎉 רכישות ב-GoOut</p>
+                    <p className="text-3xl font-bold text-yellow-400 font-mono">{formatNumber(funnel.siteWide.purchases)}</p>
+                    {funnel.siteWide.revenue > 0 && (
+                      <p className="text-xs text-jungle-text/50 mt-1">₪{formatNumber(funnel.siteWide.revenue)}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-col items-center justify-center px-2 text-jungle-text/40">
-                  <span className="text-lg">←</span>
-                  <span className="text-xs font-mono whitespace-nowrap">
-                    {funnel.siteWide.viewToRedirectRate !== null ? `${funnel.siteWide.viewToRedirectRate.toFixed(1)}%` : '—'}
-                  </span>
-                </div>
-                <div className="flex-1 bg-jungle-lime/10 border border-jungle-lime/20 rounded-xl p-4 text-center">
-                  <p className="text-xs text-jungle-text/60 mb-1">🔗 קליקים ל-GoOut</p>
-                  <p className="text-3xl font-bold text-jungle-lime font-mono">{formatNumber(funnel.siteWide.redirects)}</p>
-                </div>
-                <div className="flex flex-col items-center justify-center px-2 text-jungle-text/40">
-                  <span className="text-lg">←</span>
-                  <span className="text-xs font-mono whitespace-nowrap">
-                    {funnel.siteWide.redirectToPurchaseRate !== null ? `${funnel.siteWide.redirectToPurchaseRate.toFixed(1)}%` : '—'}
-                  </span>
-                </div>
-                <div className="flex-1 bg-yellow-400/10 border border-yellow-400/20 rounded-xl p-4 text-center">
-                  <p className="text-xs text-jungle-text/60 mb-1">🎉 רכישות ב-GoOut</p>
-                  <p className="text-3xl font-bold text-yellow-400 font-mono">{formatNumber(funnel.siteWide.purchases)}</p>
-                  {funnel.siteWide.revenue > 0 && (
-                    <p className="text-xs text-jungle-text/50 mt-1">₪{formatNumber(funnel.siteWide.revenue)}</p>
-                  )}
-                </div>
-              </div>
+                <p className="text-xs text-jungle-text/40 mt-2">
+                  "צפיות ב-GoOut" הוא מונה מצטבר של GoOut עצמו (סך כל הזמן) ואינו מוגבל לטווח הימים שנבחר למעלה — שאר העמודות כן.
+                </p>
+              </>
             )}
-            {/* Real GoOut data (views/revenue scraped directly from GoOut's own panel,
-                not our own site analytics) — a lifetime snapshot per event, not
-                windowed by the day-range selector above, so shown separately. */}
+            {/* Real GoOut revenue — a lifetime snapshot per event (own_revenue from
+                GoOut's endOne API), not windowed by the day-range selector above.
+                This is gross ticket revenue sold through this account, not a 6% cut. */}
             {!isLoadingFunnel && funnel && (
               <div className="flex flex-col sm:flex-row gap-2 mt-3 pt-3 border-t border-wood-brown/50">
-                <div className="flex-1 bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 text-center">
-                  <p className="text-xs text-jungle-text/60 mb-1">👁️ צפיות אמיתיות ב-GoOut (סה"כ)</p>
-                  <p className="text-3xl font-bold text-purple-400 font-mono">{formatNumber(funnel.siteWide.realGoOutViews ?? 0)}</p>
-                </div>
                 <div className="flex-1 bg-jungle-lime/10 border border-jungle-lime/20 rounded-xl p-4 text-center">
-                  <p className="text-xs text-jungle-text/60 mb-1">💰 הכנסה אמיתית ב-GoOut (סה"כ)</p>
+                  <p className="text-xs text-jungle-text/60 mb-1">💰 מחזור מכירות אמיתי ב-GoOut (מצטבר, לא לפי טווח)</p>
                   <p className="text-3xl font-bold text-jungle-lime font-mono">₪{formatNumber(funnel.siteWide.realGoOutRevenue ?? 0)}</p>
                 </div>
               </div>
@@ -1022,12 +1128,54 @@ const AdminAnalytics: React.FC = () => {
             </div>
           </div>
 
-          {/* All Parties Table - Full Detail */}
+          {/* All Parties — merged performance + conversion table. One row per
+              party combining site analytics, GoOut confirmed purchases, and
+              real GoOut views/revenue. Includes events whose date has already
+              passed — sourced from the funnel endpoint's raw event logs, not
+              the live-parties rollup, so past events (where most real GoOut
+              sales data lives) aren't silently dropped. */}
           <div className="bg-jungle-surface border border-wood-brown rounded-2xl shadow-lg p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
               <h3 className="text-lg text-jungle-text font-bold flex items-center gap-2">
-                📋 כל האירועים - טבלת ביצועים
+                📋 כל האירועים - ביצועים ומשפך המרות
               </h3>
+              <div className="flex bg-jungle-deep rounded-lg p-1 border border-wood-brown self-start">
+                {[7, 30, 90].map(d => (
+                  <button
+                    key={d}
+                    onClick={() => setFunnelDays(d)}
+                    className={`px-3 py-1 text-xs rounded-md transition-all ${funnelDays === d
+                      ? 'bg-jungle-accent text-white font-medium shadow-sm'
+                      : 'text-jungle-text/60 hover:text-jungle-text'
+                      }`}
+                  >
+                    {d} ימים
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-jungle-text/50 mb-4">
+              צפייה ← קליק ל-GoOut ← צפיות ב-GoOut (מצטבר) ← רכישה מאושרת ב-GoOut · כולל אירועים שכבר עברו · עמודות "מצטבר" אינן מוגבלות לטווח הימים שנבחר
+            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div className="flex bg-jungle-deep rounded-lg p-1 border border-wood-brown self-start">
+                {([
+                  ['all', 'הכל'],
+                  ['active', 'פעילים'],
+                  ['inactive', 'לא פעילים'],
+                ] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    onClick={() => setPartyStatusFilter(value)}
+                    className={`px-3 py-1 text-xs rounded-md transition-all ${partyStatusFilter === value
+                      ? 'bg-jungle-accent text-white font-medium shadow-sm'
+                      : 'text-jungle-text/60 hover:text-jungle-text'
+                      }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
@@ -1045,71 +1193,73 @@ const AdminAnalytics: React.FC = () => {
                 </button>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-jungle-text/50 text-xs border-b border-wood-brown/50">
-                    <th className="text-right py-2 px-3">שם</th>
-                    <th className="text-right py-2 px-3">Slug</th>
-                    <th className="text-right py-2 px-3">תאריך</th>
-                    <th className="text-right py-2 px-3">צפיות</th>
-                    <th className="text-right py-2 px-3">קליקים</th>
-                    <th className="text-right py-2 px-3">CTR</th>
-                    <th className="text-right py-2 px-3">כרטיסים שנמכרו</th>
-                    <th className="text-right py-2 px-3">המרה אמיתית</th>
-                    <th className="text-right py-2 px-3">צפיות ב-GoOut</th>
-                    <th className="text-right py-2 px-3">הכנסה אמיתית (GoOut)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {partyTablePageRows.map(party => {
-                    const ctr = calculateCTR(party.views, party.redirects);
-                    const sales = salesByPartyId[party.partyId];
-                    const ticketsSold = sales?.totalTicketsSold ?? null;
-                    const realConversion = ticketsSold !== null ? calculateRealConversion(ticketsSold, party.redirects) : null;
-                    return (
-                      <tr key={party.partyId} className="border-b border-wood-brown/50 hover:bg-white/5 transition-colors">
-                        <td className="py-2 px-3 text-jungle-text font-medium truncate max-w-[200px]">{party.name}</td>
-                        <td className="py-2 px-3 text-jungle-text/50 font-mono text-xs">{party.slug}</td>
+            {isLoadingFunnel ? (
+              <div className="p-6 flex justify-center"><LoadingSpinner /></div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-jungle-text/50 text-xs border-b border-wood-brown/50">
+                      <SortableTh label="שם" sortKey="name" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
+                      <th className="text-right py-2 px-3">Slug</th>
+                      <SortableTh label="תאריך" sortKey="date" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
+                      <th className="text-right py-2 px-3">סטטוס</th>
+                      <SortableTh label="צפיות באתר" sortKey="views" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
+                      <SortableTh label="קליקים ל-GoOut" sortKey="redirects" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
+                      <th className="text-right py-2 px-3">צפייה→קליק</th>
+                      <SortableTh label="צפיות ב-GoOut (מצטבר)" sortKey="realGoOutViews" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
+                      <SortableTh label="רכישות ב-GoOut" sortKey="purchases" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
+                      <th className="text-right py-2 px-3">קליק→רכישה</th>
+                      <SortableTh label="הכנסות" sortKey="revenue" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
+                      <SortableTh label="מחזור אמיתי ב-GoOut (מצטבר)" sortKey="realGoOutRevenue" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
+                      <SortableTh label="כרטיסים סה״כ" sortKey="totalTicketsSold" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {partyTablePageRows.map(row => (
+                      <tr key={row.partyId} className="border-b border-wood-brown/50 hover:bg-white/5 transition-colors">
+                        <td className="py-2 px-3 text-jungle-text font-medium truncate max-w-[200px]">{row.name || '—'}</td>
+                        <td className="py-2 px-3 text-jungle-text/50 font-mono text-xs">{row.slug || '—'}</td>
                         <td className="py-2 px-3 text-jungle-text/60 text-xs whitespace-nowrap">
-                          {party.date ? new Date(party.date).toLocaleDateString('he-IL') : '-'}
+                          {row.date ? new Date(row.date).toLocaleDateString('he-IL') : '-'}
                         </td>
-                        <td className="py-2 px-3 text-blue-400 font-mono">{party.views}</td>
-                        <td className="py-2 px-3 text-jungle-lime font-mono">{party.redirects}</td>
                         <td className="py-2 px-3">
-                          <span className={`font-mono font-bold ${ctr > 5 ? 'text-green-400' : ctr > 2 ? 'text-yellow-400' : 'text-red-400'}`}>
-                            {ctr.toFixed(1)}%
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${row.isActive ? 'bg-green-500/10 text-green-400' : 'bg-jungle-text/10 text-jungle-text/50'}`}>
+                            {row.isActive ? 'פעיל' : 'לא פעיל'}
                           </span>
                         </td>
-                        <td className="py-2 px-3 text-jungle-accent font-mono">
-                          {ticketsSold !== null ? ticketsSold : '—'}
-                        </td>
-                        <td className="py-2 px-3">
-                          {realConversion !== null ? (
-                            <span className={`font-mono font-bold ${realConversion > 5 ? 'text-green-400' : realConversion > 2 ? 'text-yellow-400' : 'text-red-400'}`}>
-                              {realConversion.toFixed(1)}%
-                            </span>
-                          ) : (
-                            <span className="text-jungle-text/60 text-xs">אין נתון</span>
-                          )}
+                        <td className="py-2 px-3 text-blue-400 font-mono">{row.views}</td>
+                        <td className="py-2 px-3 text-jungle-lime font-mono">{row.redirects}</td>
+                        <td className="py-2 px-3 text-jungle-text/60 font-mono text-xs">
+                          {row.viewToRedirectRate !== null ? `${row.viewToRedirectRate.toFixed(1)}%` : '—'}
                         </td>
                         <td className="py-2 px-3 text-purple-400 font-mono">
-                          {sales?.realViews ?? '—'}
+                          {row.realGoOutViews ?? '—'}
+                        </td>
+                        <td className="py-2 px-3 text-yellow-400 font-mono font-bold">{row.purchases}</td>
+                        <td className="py-2 px-3 text-jungle-text/60 font-mono text-xs">
+                          {row.redirectToPurchaseRate !== null ? `${row.redirectToPurchaseRate.toFixed(1)}%` : '—'}
+                        </td>
+                        <td className="py-2 px-3 text-jungle-text/60 font-mono">
+                          {row.revenue > 0 ? `₪${row.revenue.toFixed(0)}` : 'אין נתון'}
                         </td>
                         <td className="py-2 px-3 text-jungle-lime font-mono">
-                          {sales?.realTotalRevenue != null ? `₪${sales.realTotalRevenue.toFixed(0)}` : '—'}
+                          {row.realGoOutRevenue != null ? `₪${row.realGoOutRevenue.toFixed(0)}` : '—'}
+                        </td>
+                        <td className="py-2 px-3 text-jungle-accent font-mono">
+                          {row.totalTicketsSold ?? '—'}
                         </td>
                       </tr>
-                    );
-                  })}
-                  {partyTablePageRows.length === 0 && (
-                    <tr>
-                      <td colSpan={10} className="py-6 text-center text-jungle-text/50">לא נמצאו אירועים תואמים</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+                    {partyTablePageRows.length === 0 && (
+                      <tr>
+                        <td colSpan={12} className="py-6 text-center text-jungle-text/50">לא נמצאו אירועים תואמים</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
             {filteredPartyTableRows.length > PARTY_TABLE_PAGE_SIZE && (
               <div className="flex items-center justify-between mt-3">
                 <p className="text-jungle-text/50 text-xs">
@@ -1131,90 +1281,6 @@ const AdminAnalytics: React.FC = () => {
                     הבא
                   </button>
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Per-party funnel: views -> clicks to GoOut -> confirmed GoOut
-              purchases. Includes events whose date has already passed —
-              sourced from raw event logs, not the live-parties rollup, so
-              past events (where most real GoOut sales data lives) aren't
-              silently dropped. */}
-          <div className="bg-jungle-surface border border-wood-brown rounded-2xl shadow-lg p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
-              <h3 className="text-lg text-jungle-text font-bold flex items-center gap-2">
-                🔻 משפך המרות לכל אירוע
-              </h3>
-              <div className="flex bg-jungle-deep rounded-lg p-1 border border-wood-brown self-start">
-                {[7, 30, 90].map(d => (
-                  <button
-                    key={d}
-                    onClick={() => setFunnelDays(d)}
-                    className={`px-3 py-1 text-xs rounded-md transition-all ${funnelDays === d
-                      ? 'bg-jungle-accent text-white font-medium shadow-sm'
-                      : 'text-jungle-text/60 hover:text-jungle-text'
-                      }`}
-                  >
-                    {d} ימים
-                  </button>
-                ))}
-              </div>
-            </div>
-            <p className="text-xs text-jungle-text/50 mb-4">
-              צפייה ← קליק לרכישה ב-GoOut ← רכישה מאושרת ב-GoOut · כולל אירועים שכבר עברו
-            </p>
-            {isLoadingFunnel ? (
-              <div className="p-6 flex justify-center"><LoadingSpinner /></div>
-            ) : funnelPartyRows.length === 0 ? (
-              <p className="text-jungle-text/50 text-center py-8">אין נתוני משפך בטווח הזמן שנבחר</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-jungle-text/50 text-xs border-b border-wood-brown/50">
-                      <th className="text-right py-2 px-3">אירוע</th>
-                      <th className="text-right py-2 px-3">תאריך</th>
-                      <th className="text-right py-2 px-3">צפיות</th>
-                      <th className="text-right py-2 px-3">קליקים ל-GoOut</th>
-                      <th className="text-right py-2 px-3">צפייה→קליק</th>
-                      <th className="text-right py-2 px-3">רכישות ב-GoOut</th>
-                      <th className="text-right py-2 px-3">קליק→רכישה</th>
-                      <th className="text-right py-2 px-3">הכנסות</th>
-                      <th className="text-right py-2 px-3">צפיות ב-GoOut</th>
-                      <th className="text-right py-2 px-3">הכנסה אמיתית (GoOut)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {funnelPartyRows.map(row => (
-                      <tr key={row.partyId} className="border-b border-wood-brown/50 hover:bg-white/5 transition-colors">
-                        <td className="py-2 px-3 text-jungle-text font-medium truncate max-w-[220px]">
-                          {row.name || '—'}
-                        </td>
-                        <td className="py-2 px-3 text-jungle-text/60 text-xs whitespace-nowrap">
-                          {row.date ? new Date(row.date).toLocaleDateString('he-IL') : '-'}
-                        </td>
-                        <td className="py-2 px-3 text-blue-400 font-mono">{row.views}</td>
-                        <td className="py-2 px-3 text-jungle-lime font-mono">{row.redirects}</td>
-                        <td className="py-2 px-3 text-jungle-text/60 font-mono text-xs">
-                          {row.viewToRedirectRate !== null ? `${row.viewToRedirectRate.toFixed(1)}%` : '—'}
-                        </td>
-                        <td className="py-2 px-3 text-yellow-400 font-mono font-bold">{row.purchases}</td>
-                        <td className="py-2 px-3 text-jungle-text/60 font-mono text-xs">
-                          {row.redirectToPurchaseRate !== null ? `${row.redirectToPurchaseRate.toFixed(1)}%` : '—'}
-                        </td>
-                        <td className="py-2 px-3 text-jungle-text/60 font-mono">
-                          {row.revenue > 0 ? `₪${row.revenue.toFixed(0)}` : 'אין נתון'}
-                        </td>
-                        <td className="py-2 px-3 text-purple-400 font-mono">
-                          {row.realGoOutViews ?? '—'}
-                        </td>
-                        <td className="py-2 px-3 text-jungle-lime font-mono">
-                          {row.realGoOutRevenue != null ? `₪${row.realGoOutRevenue.toFixed(0)}` : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
             )}
           </div>
