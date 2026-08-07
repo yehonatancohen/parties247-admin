@@ -141,7 +141,9 @@ export interface FunnelStage {
   viewToRedirectRate: number | null;
   redirectToPurchaseRate: number | null;
   // Real GoOut data (views/revenue scraped directly from GoOut's own panel via
-  // cf-relay) — a lifetime snapshot per event, not windowed like the fields
+  // cf-relay). GoOut only exposes a lifetime counter per event, not a windowed
+  // delta, so these are filtered by which parties' own dates fall in realMonth
+  // (see FunnelResponse.realMonthsAvailable) rather than by the days window
   // above. null on a party row until that event's first successful GoOut
   // stats scrape.
   realGoOutViews: number | null;
@@ -163,8 +165,11 @@ export interface PartyFunnelRow extends FunnelStage {
 }
 
 export interface FunnelResponse {
-  siteWide: FunnelStage & { windowDays: number };
+  siteWide: FunnelStage & { windowDays: number; realMonth: string };
   byParty: PartyFunnelRow[];
+  // "YYYY-MM" strings, sorted, for every month that has at least one party
+  // with real GoOut data — populates the real-revenue month filter.
+  realMonthsAvailable: string[];
 }
 
 export interface AnalyticsSummary {

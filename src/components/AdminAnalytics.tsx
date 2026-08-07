@@ -9,6 +9,18 @@ import { FireIcon, TicketIcon, MegaphoneIcon } from './Icons';
 // --- Helpers ---
 const formatNumber = (num: number) => new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(num);
 
+const HEBREW_MONTHS = [
+  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+];
+
+// "2026-08" -> "אוגוסט 2026"
+const formatMonthLabel = (yyyyMm: string): string => {
+  const [year, month] = yyyyMm.split('-');
+  const idx = parseInt(month, 10) - 1;
+  return idx >= 0 && idx < 12 ? `${HEBREW_MONTHS[idx]} ${year}` : yyyyMm;
+};
+
 const calculateCTR = (views: number, clicks: number) => {
   if (views === 0) return 0;
   return (clicks / views) * 100;
@@ -103,7 +115,7 @@ const exportPartiesToCsv = (parties: MergedPartyRow[]) => {
   ]);
   downloadCsv(
     `parties-performance-${new Date().toISOString().slice(0, 10)}.csv`,
-    ['שם', 'Slug', 'חשבון', 'תאריך', 'סטטוס', 'צפיות באתר', 'קליקים ל-GoOut', 'CTR', 'צפיות ב-GoOut (מצטבר)', 'רכישות ב-GoOut', 'הכנסות', 'מחזור אמיתי ב-GoOut (מצטבר)', 'כרטיסים סה"כ'],
+    ['שם', 'Slug', 'חשבון', 'תאריך', 'סטטוס', 'צפיות באתר', 'קליקים ל-GoOut', 'CTR', 'צפיות ב-GoOut', 'רכישות ב-GoOut', 'הכנסות', 'מחזור אמיתי ב-GoOut', 'כרטיסים סה"כ'],
     rows,
   );
 };
@@ -350,6 +362,10 @@ const AdminAnalytics: React.FC = () => {
   const [salesRows, setSalesRows] = useState<PartySalesRecord[]>([]);
   const [funnel, setFunnel] = useState<FunnelResponse | null>(null);
   const [funnelDays, setFunnelDays] = useState<number>(30);
+  // Filters the real-GoOut (views/revenue) numbers by which parties' own dates
+  // fall in that month -- 'all' or "YYYY-MM". Separate from funnelDays because
+  // real GoOut data is a lifetime snapshot per event, not a windowed delta.
+  const [realMonthFilter, setRealMonthFilter] = useState<string>('all');
   const [isLoadingFunnel, setIsLoadingFunnel] = useState(false);
   const [detailedData, setDetailedData] = useState<DetailedAnalyticsResponse | null>(null);
   const [visitorData, setVisitorData] = useState<VisitorAnalyticsResponse | null>(null);
@@ -424,10 +440,10 @@ const AdminAnalytics: React.FC = () => {
     }
   };
 
-  const fetchFunnel = async (days: number) => {
+  const fetchFunnel = async (days: number, realMonth: string) => {
     setIsLoadingFunnel(true);
     try {
-      const data = await getPartyFunnel(days);
+      const data = await getPartyFunnel(days, realMonth);
       setFunnel(data);
     } catch (err) {
       console.error('Failed to load funnel analytics', err);
@@ -442,8 +458,8 @@ const AdminAnalytics: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchFunnel(funnelDays).catch(() => { });
-  }, [funnelDays]);
+    fetchFunnel(funnelDays, realMonthFilter).catch(() => { });
+  }, [funnelDays, realMonthFilter]);
 
   useEffect(() => {
     fetchDetailedAnalytics().catch(() => { });
@@ -709,7 +725,7 @@ const AdminAnalytics: React.FC = () => {
                     <span className="text-lg">←</span>
                   </div>
                   <div className="flex-1 bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 text-center">
-                    <p className="text-xs text-jungle-text/60 mb-1">👁️ צפיות ב-GoOut (מצטבר)</p>
+                    <p className="text-xs text-jungle-text/60 mb-1">👁️ צפיות ב-GoOut ({realMonthFilter === 'all' ? 'כל הזמן' : formatMonthLabel(realMonthFilter)})</p>
                     <p className="text-3xl font-bold text-purple-400 font-mono">{formatNumber(funnel.siteWide.realGoOutViews ?? 0)}</p>
                   </div>
                   <div className="flex flex-col items-center justify-center px-2 text-jungle-text/40">
@@ -727,18 +743,48 @@ const AdminAnalytics: React.FC = () => {
                   </div>
                 </div>
                 <p className="text-xs text-jungle-text/40 mt-2">
-                  "צפיות ב-GoOut" הוא מונה מצטבר של GoOut עצמו (סך כל הזמן) ואינו מוגבל לטווח הימים שנבחר למעלה — שאר העמודות כן.
+                  "צפיות ב-GoOut" ו"מחזור מכירות אמיתי" הם מונים מצטברים של GoOut עצמו לכל אירוע —
+                  GoOut לא חושף שינוי יומי, רק סך מצטבר, אז הסינון למטה הוא לפי תאריך האירוע עצמו
+                  (לא לפי טווח הימים שנבחר למעלה).
                 </p>
               </>
             )}
-            {/* Real GoOut revenue — a lifetime snapshot per event (own_revenue from
-                GoOut's endOne API), not windowed by the day-range selector above.
-                This is gross ticket revenue sold through this account, not a 6% cut. */}
+            {/* Real GoOut views/revenue are a lifetime snapshot per event (GoOut has no
+                windowed-delta API) — filtered by which parties' own dates fall in the
+                selected month instead, via realMonth on the funnel endpoint. */}
             {!isLoadingFunnel && funnel && (
-              <div className="flex flex-col sm:flex-row gap-2 mt-3 pt-3 border-t border-wood-brown/50">
-                <div className="flex-1 bg-jungle-lime/10 border border-jungle-lime/20 rounded-xl p-4 text-center">
-                  <p className="text-xs text-jungle-text/60 mb-1">💰 מחזור מכירות אמיתי ב-GoOut (מצטבר, לא לפי טווח)</p>
-                  <p className="text-3xl font-bold text-jungle-lime font-mono">₪{formatNumber(funnel.siteWide.realGoOutRevenue ?? 0)}</p>
+              <div className="mt-3 pt-3 border-t border-wood-brown/50">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <span className="text-xs text-jungle-text/50">סינון לפי חודש האירוע:</span>
+                  <div className="flex flex-wrap bg-jungle-deep rounded-lg p-1 border border-wood-brown gap-1">
+                    <button
+                      onClick={() => setRealMonthFilter('all')}
+                      className={`px-3 py-1 text-xs rounded-md transition-all ${realMonthFilter === 'all'
+                        ? 'bg-jungle-accent text-white font-medium shadow-sm'
+                        : 'text-jungle-text/60 hover:text-jungle-text'
+                        }`}
+                    >
+                      כל הזמן
+                    </button>
+                    {funnel.realMonthsAvailable.map(m => (
+                      <button
+                        key={m}
+                        onClick={() => setRealMonthFilter(m)}
+                        className={`px-3 py-1 text-xs rounded-md transition-all whitespace-nowrap ${realMonthFilter === m
+                          ? 'bg-jungle-accent text-white font-medium shadow-sm'
+                          : 'text-jungle-text/60 hover:text-jungle-text'
+                          }`}
+                      >
+                        {formatMonthLabel(m)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex-1 bg-jungle-lime/10 border border-jungle-lime/20 rounded-xl p-4 text-center">
+                    <p className="text-xs text-jungle-text/60 mb-1">💰 מחזור מכירות אמיתי ב-GoOut ({realMonthFilter === 'all' ? 'כל הזמן' : formatMonthLabel(realMonthFilter)})</p>
+                    <p className="text-3xl font-bold text-jungle-lime font-mono">₪{formatNumber(funnel.siteWide.realGoOutRevenue ?? 0)}</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -1167,7 +1213,8 @@ const AdminAnalytics: React.FC = () => {
               </div>
             </div>
             <p className="text-xs text-jungle-text/50 mb-4">
-              צפייה ← קליק ל-GoOut ← צפיות ב-GoOut (מצטבר) ← רכישה מאושרת ב-GoOut · כולל אירועים שכבר עברו · עמודות "מצטבר" אינן מוגבלות לטווח הימים שנבחר
+              צפייה ← קליק ל-GoOut ← צפיות ב-GoOut ← רכישה מאושרת ב-GoOut · כולל אירועים שכבר עברו · עמודות "GoOut" מסוננות לפי{' '}
+              {realMonthFilter === 'all' ? 'כל הזמן' : formatMonthLabel(realMonthFilter)} (תאריך האירוע, לא טווח הימים למעלה — ניתן לשנות במשפך כלל האתר)
             </p>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <div className="flex flex-wrap gap-2">
@@ -1240,11 +1287,11 @@ const AdminAnalytics: React.FC = () => {
                       <SortableTh label="צפיות באתר" sortKey="views" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
                       <SortableTh label="קליקים ל-GoOut" sortKey="redirects" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
                       <th className="text-right py-2 px-3">צפייה→קליק</th>
-                      <SortableTh label="צפיות ב-GoOut (מצטבר)" sortKey="realGoOutViews" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
+                      <SortableTh label="צפיות ב-GoOut" sortKey="realGoOutViews" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
                       <SortableTh label="רכישות ב-GoOut" sortKey="purchases" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
                       <th className="text-right py-2 px-3">קליק→רכישה</th>
                       <SortableTh label="הכנסות" sortKey="revenue" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
-                      <SortableTh label="מחזור אמיתי ב-GoOut (מצטבר)" sortKey="realGoOutRevenue" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
+                      <SortableTh label="מחזור אמיתי ב-GoOut" sortKey="realGoOutRevenue" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
                       <SortableTh label="כרטיסים סה״כ" sortKey="totalTicketsSold" current={partySortKey} dir={partySortDir} onSort={togglePartySort} />
                     </tr>
                   </thead>

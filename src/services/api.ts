@@ -628,8 +628,8 @@ const normalizeFunnelStage = (item: any) => ({
   realGoOutRevenue: typeof item?.realGoOutRevenue === 'number' ? item.realGoOutRevenue : null,
 });
 
-export const getPartyFunnel = async (days: number = 30): Promise<FunnelResponse> => {
-  const params = new URLSearchParams({ days: String(days) });
+export const getPartyFunnel = async (days: number = 30, realMonth: string = 'all'): Promise<FunnelResponse> => {
+  const params = new URLSearchParams({ days: String(days), realMonth });
   const response = await fetch(`${API_URL}/admin/analytics/funnel?${params.toString()}`, {
     headers: { ...getAuthHeader() },
   });
@@ -640,6 +640,7 @@ export const getPartyFunnel = async (days: number = 30): Promise<FunnelResponse>
     siteWide: {
       ...normalizeFunnelStage(data.siteWide),
       windowDays: normalizeCount(data.siteWide?.windowDays) || days,
+      realMonth: typeof data.siteWide?.realMonth === 'string' ? data.siteWide.realMonth : 'all',
     },
     byParty: byParty.map((item: any) => ({
       ...normalizeFunnelStage(item),
@@ -649,6 +650,9 @@ export const getPartyFunnel = async (days: number = 30): Promise<FunnelResponse>
       slug: typeof item?.slug === 'string' ? item.slug : null,
       date: typeof item?.date === 'string' ? item.date : null,
     })),
+    realMonthsAvailable: Array.isArray(data.realMonthsAvailable)
+      ? data.realMonthsAvailable.filter((m: unknown) => typeof m === 'string')
+      : [],
   };
 };
 
