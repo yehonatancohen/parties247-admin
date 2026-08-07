@@ -137,6 +137,12 @@ export interface FunnelStage {
   revenue: number;
   viewToRedirectRate: number | null;
   redirectToPurchaseRate: number | null;
+  // Real GoOut data (views/revenue scraped directly from GoOut's own panel via
+  // cf-relay) — a lifetime snapshot per event, not windowed like the fields
+  // above. null on a party row until that event's first successful GoOut
+  // stats scrape.
+  realGoOutViews: number | null;
+  realGoOutRevenue: number | null;
 }
 
 export interface PartyFunnelRow extends FunnelStage {

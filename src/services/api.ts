@@ -623,6 +623,8 @@ const normalizeFunnelStage = (item: any) => ({
   revenue: typeof item?.revenue === 'number' ? item.revenue : 0,
   viewToRedirectRate: typeof item?.viewToRedirectRate === 'number' ? item.viewToRedirectRate : null,
   redirectToPurchaseRate: typeof item?.redirectToPurchaseRate === 'number' ? item.redirectToPurchaseRate : null,
+  realGoOutViews: typeof item?.realGoOutViews === 'number' ? item.realGoOutViews : null,
+  realGoOutRevenue: typeof item?.realGoOutRevenue === 'number' ? item.realGoOutRevenue : null,
 });
 
 export const getPartyFunnel = async (days: number = 30): Promise<FunnelResponse> => {

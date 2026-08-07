@@ -442,17 +442,12 @@ const AdminAnalytics: React.FC = () => {
   const funnelPartyRows = useMemo(() => {
     if (!funnel) return [];
     return funnel.byParty
-      .filter(row => {
-        if (row.views > 0 || row.redirects > 0 || row.purchases > 0) return true;
-        // Also keep events with zero site-side activity (view/redirect/purchase
-        // rollups can be windowed/cleared) but real GoOut data available —
-        // otherwise this table silently drops exactly the rows the new
-        // real-views/revenue columns exist to show.
-        const sales = salesByPartyId[row.partyId];
-        return sales != null && (sales.realViews != null || sales.realTotalRevenue != null);
-      })
+      .filter(row =>
+        row.views > 0 || row.redirects > 0 || row.purchases > 0
+        || row.realGoOutViews != null || row.realGoOutRevenue != null,
+      )
       .sort((a, b) => b.purchases - a.purchases || b.redirects - a.redirects || b.views - a.views);
-  }, [funnel, salesByPartyId]);
+  }, [funnel]);
 
   // Process chart data from API
   const chartData = useMemo(() => {
@@ -611,6 +606,21 @@ const AdminAnalytics: React.FC = () => {
                   {funnel.siteWide.revenue > 0 && (
                     <p className="text-xs text-jungle-text/50 mt-1">₪{formatNumber(funnel.siteWide.revenue)}</p>
                   )}
+                </div>
+              </div>
+            )}
+            {/* Real GoOut data (views/revenue scraped directly from GoOut's own panel,
+                not our own site analytics) — a lifetime snapshot per event, not
+                windowed by the day-range selector above, so shown separately. */}
+            {!isLoadingFunnel && funnel && (
+              <div className="flex flex-col sm:flex-row gap-2 mt-3 pt-3 border-t border-wood-brown/50">
+                <div className="flex-1 bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 text-center">
+                  <p className="text-xs text-jungle-text/60 mb-1">👁️ צפיות אמיתיות ב-GoOut (סה"כ)</p>
+                  <p className="text-3xl font-bold text-purple-400 font-mono">{formatNumber(funnel.siteWide.realGoOutViews ?? 0)}</p>
+                </div>
+                <div className="flex-1 bg-jungle-lime/10 border border-jungle-lime/20 rounded-xl p-4 text-center">
+                  <p className="text-xs text-jungle-text/60 mb-1">💰 הכנסה אמיתית ב-GoOut (סה"כ)</p>
+                  <p className="text-3xl font-bold text-jungle-lime font-mono">₪{formatNumber(funnel.siteWide.realGoOutRevenue ?? 0)}</p>
                 </div>
               </div>
             )}
@@ -1175,9 +1185,7 @@ const AdminAnalytics: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {funnelPartyRows.map(row => {
-                      const sales = salesByPartyId[row.partyId];
-                      return (
+                    {funnelPartyRows.map(row => (
                       <tr key={row.partyId} className="border-b border-wood-brown/50 hover:bg-white/5 transition-colors">
                         <td className="py-2 px-3 text-jungle-text font-medium truncate max-w-[220px]">
                           {row.name || '—'}
@@ -1198,14 +1206,13 @@ const AdminAnalytics: React.FC = () => {
                           {row.revenue > 0 ? `₪${row.revenue.toFixed(0)}` : 'אין נתון'}
                         </td>
                         <td className="py-2 px-3 text-purple-400 font-mono">
-                          {sales?.realViews ?? '—'}
+                          {row.realGoOutViews ?? '—'}
                         </td>
                         <td className="py-2 px-3 text-jungle-lime font-mono">
-                          {sales?.realTotalRevenue != null ? `₪${sales.realTotalRevenue.toFixed(0)}` : '—'}
+                          {row.realGoOutRevenue != null ? `₪${row.realGoOutRevenue.toFixed(0)}` : '—'}
                         </td>
                       </tr>
-                      );
-                    })}
+                    ))}
                   </tbody>
                 </table>
               </div>
