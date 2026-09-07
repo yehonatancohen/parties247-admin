@@ -268,3 +268,36 @@ export interface AuditLogResponse {
   total: number;
   hasMore: boolean;
 }
+
+// --- WhatsApp promo drafter (/api/admin/promo/whatsapp) ---
+
+export type PromoTier = 'account1' | 'account2';
+
+export interface PromoCandidate {
+  partyId: string;
+  slug: string;
+  name: string;
+  date: string;          // ISO, Israel offset
+  dateLabel: string;     // "יום חמישי 10.09 · 23:00"
+  location: string;
+  musicType: string;
+  age: string;
+  ticketPrice: number | null;
+  tier: PromoTier;       // account1 = flat ₪25/ticket, account2 = 6% of price
+  expectedPerTicket: number;
+  ticketsLast30d: number;
+  revenueLast30d: number;
+  daysUntil: number;
+  score: number;
+  url: string;           // GoOut link carrying our referral code
+  siteUrl: string | null;
+  message: string;       // ready-to-paste WhatsApp text
+}
+
+export interface PromoResponse {
+  days: number;
+  limit: number;
+  generatedAt: string;
+  candidates: PromoCandidate[];
+  digest: string;
+}
