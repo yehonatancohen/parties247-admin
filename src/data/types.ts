@@ -268,3 +268,95 @@ export interface AuditLogResponse {
   total: number;
   hasMore: boolean;
 }
+
+// --- WhatsApp engine ---
+// Field names deliberately mirror the backend's Mongo docs verbatim (see
+// _wa_serialize in app.py) rather than being remapped client-side.
+
+export interface WaSettings {
+  quietHoursStart: string; // "HH:MM", Asia/Jerusalem
+  quietHoursEnd: string;
+  dailyCap: number;
+  pacingMinSec: number;
+  pacingMaxSec: number;
+  sendingEnabled: boolean;
+}
+
+export interface WaOverview {
+  settings: WaSettings;
+  engineHeartbeat: string | null;
+  todayCampaigns: number;
+  dailyCap: number;
+  targetGroupCount: number;
+  memberCount: number;
+}
+
+export interface WaGroup {
+  _id: string;
+  chatId: string;
+  name: string;
+  kind?: 'group' | 'community' | 'channel';
+  memberCount?: number;
+  isTarget: boolean;
+  archived?: boolean;
+  inviteLink?: string;
+  lastSyncedAt?: string | null;
+}
+
+export interface WaTemplate {
+  _id: string;
+  name: string;
+  body: string;
+  placeholders: string[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WaCampaignTarget {
+  chatId: string;
+  name: string;
+  code: string;
+  status: 'pending' | 'sent' | 'failed' | 'skipped';
+  sentAt?: string | null;
+  waMsgId?: string | null;
+  error?: string | null;
+  clicks?: number;
+}
+
+export interface WaCampaign {
+  _id: string;
+  partyId: string;
+  partySlug?: string;
+  templateId?: string | null;
+  text: string;
+  scheduledFor: string;
+  deferredForQuietHours?: boolean;
+  status: 'queued' | 'running' | 'done' | 'aborted' | 'cancelled';
+  createdAt: string;
+  createdBy: 'admin' | 'relay#21';
+  override?: boolean;
+  targets: WaCampaignTarget[];
+  startedAt?: string | null;
+  finishedAt?: string | null;
+}
+
+export interface WaFunnelStage {
+  count: number | null;
+  of?: number;
+  confidence: string;
+  note?: string;
+}
+
+export interface WaFunnelResponse {
+  days: number;
+  partyId: string | null;
+  campaigns: number;
+  funnel: {
+    sent: WaFunnelStage;
+    reads: WaFunnelStage;
+    clicks: WaFunnelStage;
+    buyClicks: WaFunnelStage;
+    sales: WaFunnelStage;
+  };
+}

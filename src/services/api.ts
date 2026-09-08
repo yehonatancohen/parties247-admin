@@ -1,4 +1,4 @@
-import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse } from '../data/types';
+import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse, WaOverview, WaGroup, WaTemplate, WaCampaign, WaFunnelResponse, WaSettings } from '../data/types';
 import { SeoPageConfig } from '../lib/seoparties';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -683,5 +683,78 @@ export const getAuditLog = async (
     console.error("Critical error in getAuditLog:", error);
     throw error;
   }
+};
+
+// --- WhatsApp engine ---
+
+const waFetch = async (path: string, init?: RequestInit): Promise<any> => {
+  const response = await fetch(`${API_URL}/admin/wa${path}`, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader(), ...(init?.headers || {}) },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || `WhatsApp API request failed (${response.status})`);
+  return data;
+};
+
+export const getWaOverview = (): Promise<WaOverview> => waFetch('/overview');
+
+export const getWaSettings = (): Promise<WaSettings> => waFetch('/settings');
+
+export const patchWaSettings = (updates: Partial<WaSettings>): Promise<WaSettings> =>
+  waFetch('/settings', { method: 'PATCH', body: JSON.stringify(updates) });
+
+export const getWaGroups = async (): Promise<WaGroup[]> => {
+  const data = await waFetch('/groups');
+  return Array.isArray(data.groups) ? data.groups : [];
+};
+
+export const patchWaGroup = (chatId: string, isTarget: boolean): Promise<void> =>
+  waFetch(`/groups/${encodeURIComponent(chatId)}`, { method: 'PATCH', body: JSON.stringify({ isTarget }) });
+
+export const getWaTemplates = async (): Promise<WaTemplate[]> => {
+  const data = await waFetch('/templates');
+  return Array.isArray(data.templates) ? data.templates : [];
+};
+
+export const createWaTemplate = (template: { name: string; body: string; active?: boolean }): Promise<WaTemplate> =>
+  waFetch('/templates', { method: 'POST', body: JSON.stringify(template) });
+
+export const updateWaTemplate = (id: string, template: { name: string; body: string; active?: boolean }): Promise<void> =>
+  waFetch(`/templates/${id}`, { method: 'PATCH', body: JSON.stringify(template) });
+
+export const deleteWaTemplate = (id: string): Promise<void> =>
+  waFetch(`/templates/${id}`, { method: 'DELETE' });
+
+export const previewWaTemplate = (text: string, partyId?: string): Promise<{ preview: string }> =>
+  waFetch('/preview', { method: 'POST', body: JSON.stringify({ text, partyId }) });
+
+export const getWaCampaigns = async (status?: string): Promise<WaCampaign[]> => {
+  const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  const data = await waFetch(`/campaigns${query}`);
+  return Array.isArray(data.campaigns) ? data.campaigns : [];
+};
+
+export const getWaCampaign = (id: string): Promise<WaCampaign> => waFetch(`/campaigns/${id}`);
+
+export const createWaCampaign = (payload: {
+  partyId?: string;
+  partySlug?: string;
+  templateId?: string;
+  text: string;
+  scheduledFor?: string;
+  targetChatIds: string[];
+  override?: boolean;
+}): Promise<WaCampaign> => waFetch('/campaigns', { method: 'POST', body: JSON.stringify(payload) });
+
+export const cancelWaCampaign = (id: string): Promise<void> =>
+  waFetch(`/campaigns/${id}/cancel`, { method: 'POST' });
+
+export const getWaFunnel = (partyId?: string, days?: number): Promise<WaFunnelResponse> => {
+  const params = new URLSearchParams();
+  if (partyId) params.set('partyId', partyId);
+  if (days != null) params.set('days', String(days));
+  const query = params.toString();
+  return waFetch(`/funnel${query ? `?${query}` : ''}`);
 };
 
