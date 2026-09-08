@@ -1,4 +1,4 @@
-import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse, WaOverview, WaGroup, WaTemplate, WaCampaign, WaFunnelResponse, WaSettings } from '../data/types';
+import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse, WaOverview, WaGroup, WaTemplate, WaCampaign, WaFunnelResponse, WaSettings, PromoResponse, PromoCandidate } from '../data/types';
 import { SeoPageConfig } from '../lib/seoparties';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -758,3 +758,40 @@ export const getWaFunnel = (partyId?: string, days?: number): Promise<WaFunnelRe
   return waFetch(`/funnel${query ? `?${query}` : ''}`);
 };
 
+// --- WhatsApp promo drafter ---
+
+export const getWhatsappPromo = async (days: number = 7, limit: number = 12): Promise<PromoResponse> => {
+  const params = new URLSearchParams({ days: String(days), limit: String(limit) });
+  const response = await fetch(`${API_URL}/admin/promo/whatsapp?${params.toString()}`, {
+    headers: { ...getAuthHeader() },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || 'Failed to fetch promo drafts');
+  const candidates: PromoCandidate[] = (Array.isArray(data.candidates) ? data.candidates : []).map((c: any) => ({
+    partyId: String(c?.partyId ?? ''),
+    slug: String(c?.slug ?? ''),
+    name: String(c?.name ?? ''),
+    date: String(c?.date ?? ''),
+    dateLabel: String(c?.dateLabel ?? ''),
+    location: String(c?.location ?? ''),
+    musicType: String(c?.musicType ?? ''),
+    age: String(c?.age ?? ''),
+    ticketPrice: typeof c?.ticketPrice === 'number' ? c.ticketPrice : null,
+    tier: c?.tier === 'account1' ? 'account1' : 'account2',
+    expectedPerTicket: typeof c?.expectedPerTicket === 'number' ? c.expectedPerTicket : 0,
+    ticketsLast30d: normalizeCount(c?.ticketsLast30d),
+    revenueLast30d: typeof c?.revenueLast30d === 'number' ? c.revenueLast30d : 0,
+    daysUntil: typeof c?.daysUntil === 'number' ? c.daysUntil : 0,
+    score: typeof c?.score === 'number' ? c.score : 0,
+    url: String(c?.url ?? ''),
+    siteUrl: typeof c?.siteUrl === 'string' ? c.siteUrl : null,
+    message: String(c?.message ?? ''),
+  }));
+  return {
+    days: normalizeCount(data.days) || days,
+    limit: normalizeCount(data.limit) || limit,
+    generatedAt: String(data.generatedAt ?? ''),
+    candidates,
+    digest: String(data.digest ?? ''),
+  };
+};
