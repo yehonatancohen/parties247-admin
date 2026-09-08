@@ -2,11 +2,11 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import * as api from '../services/api';
-import { WaOverview, WaGroup, WaTemplate, WaCampaign, WaFunnelResponse } from '../data/types';
+import { WaOverview, WaGroup, WaTemplate, WaCampaign, WaFunnelResponse, WaMembersOverlap } from '../data/types';
 import { useParties } from '../hooks/useParties';
 import LoadingSpinner from './LoadingSpinner';
 
-type WaTab = 'overview' | 'send' | 'campaigns' | 'groups' | 'templates';
+type WaTab = 'overview' | 'send' | 'campaigns' | 'groups' | 'templates' | 'members';
 
 const TABS: { key: WaTab; label: string }[] = [
   { key: 'overview', label: 'סקירה' },
@@ -14,6 +14,7 @@ const TABS: { key: WaTab; label: string }[] = [
   { key: 'campaigns', label: 'קמפיינים' },
   { key: 'groups', label: 'קבוצות' },
   { key: 'templates', label: 'תבניות' },
+  { key: 'members', label: 'חברים' },
 ];
 
 const STATUS_LABELS: Record<string, string> = {
@@ -558,6 +559,81 @@ const TemplatesTab: React.FC = () => {
   );
 };
 
+// --- Members ----------------------------------------------------------
+
+const MembersTab: React.FC = () => {
+  const [data, setData] = useState<WaMembersOverlap | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.getWaMembersOverlap(20).then(setData).catch((err) => setError(err instanceof Error ? err.message : 'שגיאה')).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="p-6 flex justify-center"><LoadingSpinner /></div>;
+  if (error) return <div className="p-3 bg-red-500/10 text-red-300 rounded-lg border border-red-500/30 text-sm">{error}</div>;
+  if (!data) return null;
+
+  return (
+    <div className="space-y-6">
+      <div className="text-xs text-jungle-text/50">
+        ספירות בלבד — זיהוי חברים מבוסס גיבוב מוצפן (hash) של מזהה WhatsApp, לא מספר טלפון גולמי.
+      </div>
+
+      <div className="bg-jungle-surface p-4 rounded-lg border border-wood-brown">
+        <div className="text-xs text-jungle-text/50">חברים ייחודיים בכל הקבוצות</div>
+        <div className="text-2xl font-bold text-jungle-text">{data.totalMembers}</div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold text-jungle-lime mb-2">חברים לפי קבוצה</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-jungle-text/50 text-xs border-b border-wood-brown">
+                <th className="text-right py-2 px-3">קבוצה</th>
+                <th className="text-right py-2 px-3">חברים</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.perGroup.map((g) => (
+                <tr key={g.chatId} className="border-b border-wood-brown/50">
+                  <td className="py-2 px-3 text-jungle-text">{g.name}</td>
+                  <td className="py-2 px-3 text-jungle-text/60">{g.memberCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold text-jungle-lime mb-2">חפיפה בין קבוצות (זוגות מובילים)</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-jungle-text/50 text-xs border-b border-wood-brown">
+                <th className="text-right py-2 px-3">קבוצה א׳</th>
+                <th className="text-right py-2 px-3">קבוצה ב׳</th>
+                <th className="text-right py-2 px-3">חברים משותפים</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.topPairs.map((p) => (
+                <tr key={`${p.chatIdA}-${p.chatIdB}`} className="border-b border-wood-brown/50">
+                  <td className="py-2 px-3 text-jungle-text">{p.nameA}</td>
+                  <td className="py-2 px-3 text-jungle-text">{p.nameB}</td>
+                  <td className="py-2 px-3 text-jungle-text/60">{p.sharedMembers}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Root -----------------------------------------------------------------
 
 const AdminWhatsApp: React.FC = () => {
@@ -586,6 +662,7 @@ const AdminWhatsApp: React.FC = () => {
       {activeTab === 'campaigns' && <CampaignsTab />}
       {activeTab === 'groups' && <GroupsTab />}
       {activeTab === 'templates' && <TemplatesTab />}
+      {activeTab === 'members' && <MembersTab />}
     </div>
   );
 };

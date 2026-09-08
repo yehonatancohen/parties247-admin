@@ -348,6 +348,12 @@ export interface WaFunnelStage {
   note?: string;
 }
 
+export interface WaMembersOverlap {
+  totalMembers: number;
+  perGroup: { chatId: string; name: string; memberCount: number }[];
+  topPairs: { chatIdA: string; nameA: string; chatIdB: string; nameB: string; sharedMembers: number }[];
+}
+
 export interface WaFunnelResponse {
   days: number;
   partyId: string | null;

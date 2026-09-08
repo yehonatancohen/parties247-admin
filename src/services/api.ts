@@ -1,4 +1,4 @@
-import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse, WaOverview, WaGroup, WaTemplate, WaCampaign, WaFunnelResponse, WaSettings, PromoResponse, PromoCandidate } from '../data/types';
+import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse, WaOverview, WaGroup, WaTemplate, WaCampaign, WaFunnelResponse, WaSettings, WaMembersOverlap, PromoResponse, PromoCandidate } from '../data/types';
 import { SeoPageConfig } from '../lib/seoparties';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -752,6 +752,9 @@ export const cancelWaCampaign = (id: string): Promise<void> =>
 
 export const resumeWaCampaign = (id: string): Promise<void> =>
   waFetch(`/campaigns/${id}/resume`, { method: 'POST' });
+
+export const getWaMembersOverlap = (limit?: number): Promise<WaMembersOverlap> =>
+  waFetch(`/members/overlap${limit != null ? `?limit=${limit}` : ''}`);
 
 export const getWaFunnel = (partyId?: string, days?: number): Promise<WaFunnelResponse> => {
   const params = new URLSearchParams();
