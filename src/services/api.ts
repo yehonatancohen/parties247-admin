@@ -750,6 +750,9 @@ export const createWaCampaign = (payload: {
 export const cancelWaCampaign = (id: string): Promise<void> =>
   waFetch(`/campaigns/${id}/cancel`, { method: 'POST' });
 
+export const resumeWaCampaign = (id: string): Promise<void> =>
+  waFetch(`/campaigns/${id}/resume`, { method: 'POST' });
+
 export const getWaFunnel = (partyId?: string, days?: number): Promise<WaFunnelResponse> => {
   const params = new URLSearchParams();
   if (partyId) params.set('partyId', partyId);

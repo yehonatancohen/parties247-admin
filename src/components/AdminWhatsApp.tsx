@@ -340,6 +340,15 @@ const CampaignsTab: React.FC = () => {
     }
   };
 
+  const handleResume = async (id: string) => {
+    try {
+      await api.resumeWaCampaign(id);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'שגיאה בהמשך השליחה');
+    }
+  };
+
   if (loading) return <div className="p-6 flex justify-center"><LoadingSpinner /></div>;
 
   return (
@@ -364,6 +373,11 @@ const CampaignsTab: React.FC = () => {
                 {c.status === 'queued' && (
                   <button onClick={() => handleCancel(c._id)} className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-300 px-3 py-1.5 rounded-md border border-red-500/30">
                     בטל
+                  </button>
+                )}
+                {c.status === 'aborted' && (
+                  <button onClick={() => handleResume(c._id)} className="text-xs bg-jungle-accent/10 hover:bg-jungle-accent/20 text-jungle-lime px-3 py-1.5 rounded-md border border-jungle-accent/30">
+                    המשך שליחה
                   </button>
                 )}
                 <button onClick={() => setExpanded(expanded === c._id ? null : c._id)} className="text-xs text-jungle-lime hover:underline">
