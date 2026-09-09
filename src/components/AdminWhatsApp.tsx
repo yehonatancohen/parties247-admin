@@ -430,6 +430,15 @@ const CampaignsTab: React.FC = () => {
     }
   };
 
+  const handleOverride = async (id: string) => {
+    try {
+      await api.overrideWaCampaign(id);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'שגיאה בעקיפת המגבלה');
+    }
+  };
+
   if (loading) return <div className="p-6 flex justify-center"><LoadingSpinner /></div>;
 
   return (
@@ -449,8 +458,16 @@ const CampaignsTab: React.FC = () => {
                   {new Date(c.scheduledFor).toLocaleString('he-IL')} · {c.createdBy === 'relay#21' ? 'מ-#21' : 'ידני'}
                   {c.deferredForQuietHours && ' · נדחה (שעות שקט)'}
                 </div>
+                {c.blockedReason && (
+                  <div className="text-xs text-amber-400 mt-1">⚠ {c.blockedReason}</div>
+                )}
               </div>
               <div className="flex gap-2">
+                {c.blockedReason && !c.override && (
+                  <button onClick={() => handleOverride(c._id)} className="text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 px-3 py-1.5 rounded-md border border-amber-500/30">
+                    עקוף ושלח
+                  </button>
+                )}
                 {c.status === 'queued' && (
                   <button onClick={() => handleCancel(c._id)} className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-300 px-3 py-1.5 rounded-md border border-red-500/30">
                     בטל

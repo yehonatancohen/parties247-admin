@@ -347,6 +347,9 @@ export interface WaCampaign {
   targets: WaCampaignTarget[];
   startedAt?: string | null;
   finishedAt?: string | null;
+  // Why a 'queued' campaign hasn't sent yet (daily cap reached, or waiting
+  // on a scheduled/quiet-hours time) — null when nothing is blocking it.
+  blockedReason?: string | null;
 }
 
 export interface WaFunnelStage {

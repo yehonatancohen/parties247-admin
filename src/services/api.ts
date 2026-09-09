@@ -750,6 +750,9 @@ export const createWaCampaign = (payload: {
 export const cancelWaCampaign = (id: string): Promise<void> =>
   waFetch(`/campaigns/${id}/cancel`, { method: 'POST' });
 
+export const overrideWaCampaign = (id: string): Promise<void> =>
+  waFetch(`/campaigns/${id}/override`, { method: 'POST' });
+
 export const resumeWaCampaign = (id: string): Promise<void> =>
   waFetch(`/campaigns/${id}/resume`, { method: 'POST' });
 
