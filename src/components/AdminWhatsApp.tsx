@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import * as api from '../services/api';
-import { WaOverview, WaGroup, WaTemplate, WaCampaign, WaFunnelResponse, WaMembersOverlap } from '../data/types';
+import { WaOverview, WaGroup, WaGroupBundle, WaTemplate, WaCampaign, WaFunnelResponse, WaMembersOverlap } from '../data/types';
 import { useParties } from '../hooks/useParties';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -145,6 +145,9 @@ const SendTab: React.FC = () => {
   const { parties } = useParties();
   const [groups, setGroups] = useState<WaGroup[]>([]);
   const [templates, setTemplates] = useState<WaTemplate[]>([]);
+  const [bundles, setBundles] = useState<WaGroupBundle[]>([]);
+  const [newBundleName, setNewBundleName] = useState('');
+  const [savingBundle, setSavingBundle] = useState(false);
   const [partyId, setPartyId] = useState('');
   const [templateId, setTemplateId] = useState('');
   const [text, setText] = useState('');
@@ -164,7 +167,45 @@ const SendTab: React.FC = () => {
       setSelectedChatIds(gs.filter((g) => g.isTarget).map((g) => g.chatId));
     }).catch(() => {});
     api.getWaTemplates().then(setTemplates).catch(() => {});
+    api.getWaBundles().then(setBundles).catch(() => {});
   }, []);
+
+  const loadBundles = () => api.getWaBundles().then(setBundles).catch(() => {});
+
+  const selectAll = () => setSelectedChatIds(groups.map((g) => g.chatId));
+  const selectNone = () => setSelectedChatIds([]);
+
+  const applyBundle = (bundle: WaGroupBundle) => {
+    // Intersect with currently-known groups — a bundle saved before a group
+    // was removed/renamed shouldn't silently select a stale chatId.
+    const known = new Set(groups.map((g) => g.chatId));
+    setSelectedChatIds(bundle.chatIds.filter((id) => known.has(id)));
+  };
+
+  const saveCurrentAsBundle = async () => {
+    const name = newBundleName.trim();
+    if (!name || selectedChatIds.length === 0) return;
+    setSavingBundle(true);
+    setError(null);
+    try {
+      await api.createWaBundle(name, selectedChatIds);
+      setNewBundleName('');
+      await loadBundles();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'שגיאה בשמירת החבילה');
+    } finally {
+      setSavingBundle(false);
+    }
+  };
+
+  const removeBundle = async (id: string) => {
+    try {
+      await api.deleteWaBundle(id);
+      await loadBundles();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'שגיאה במחיקת החבילה');
+    }
+  };
 
   const upcomingParties = parties
     .filter((p) => new Date(p.date).getTime() >= Date.now() - 24 * 60 * 60 * 1000)
@@ -273,7 +314,29 @@ const SendTab: React.FC = () => {
       </div>
 
       <div>
-        <label className="block text-sm text-jungle-text/70 mb-1">קבוצות יעד ({selectedChatIds.length} נבחרו)</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-sm text-jungle-text/70">קבוצות יעד ({selectedChatIds.length}/{groups.length} נבחרו)</label>
+          <div className="flex gap-2">
+            <button type="button" onClick={selectAll} className="text-xs text-jungle-lime hover:underline">בחר הכל</button>
+            <button type="button" onClick={selectNone} className="text-xs text-jungle-text/50 hover:underline">נקה בחירה</button>
+          </div>
+        </div>
+
+        {bundles.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {bundles.map((b) => (
+              <span key={b._id} className="inline-flex items-center gap-1 bg-jungle-deep border border-wood-brown rounded-full pl-1 pr-2 py-1 text-xs">
+                <button type="button" onClick={() => applyBundle(b)} className="text-jungle-lime hover:underline">
+                  {b.name} ({b.chatIds.length})
+                </button>
+                <button type="button" onClick={() => removeBundle(b._id)} title="מחק חבילה" className="text-jungle-text/40 hover:text-red-300 px-1">
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="max-h-56 overflow-y-auto bg-jungle-surface border border-wood-brown rounded-md p-2 space-y-1">
           {groups.length === 0 && <div className="text-xs text-jungle-text/40 p-2">אין עדיין קבוצות מסונכרנות מהמנוע.</div>}
           {groups.map((g) => (
@@ -282,6 +345,23 @@ const SendTab: React.FC = () => {
               {g.name} {g.memberCount != null && <span className="text-jungle-text/40 text-xs">({g.memberCount})</span>}
             </label>
           ))}
+        </div>
+
+        <div className="flex gap-2 mt-2">
+          <input
+            value={newBundleName}
+            onChange={(e) => setNewBundleName(e.target.value)}
+            placeholder="שם חבילה חדשה (למשל: קבוצות טכנו)"
+            className="flex-1 bg-jungle-surface border border-wood-brown rounded-md p-1.5 text-sm text-jungle-text"
+          />
+          <button
+            type="button"
+            onClick={saveCurrentAsBundle}
+            disabled={!newBundleName.trim() || selectedChatIds.length === 0 || savingBundle}
+            className="text-xs bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed text-jungle-text/70 px-3 py-1.5 rounded-md border border-wood-brown whitespace-nowrap"
+          >
+            {savingBundle ? <LoadingSpinner size="sm" /> : `שמור בחירה (${selectedChatIds.length}) כחבילה`}
+          </button>
         </div>
       </div>
 

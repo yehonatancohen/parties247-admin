@@ -303,6 +303,14 @@ export interface WaGroup {
   lastSyncedAt?: string | null;
 }
 
+export interface WaGroupBundle {
+  _id: string;
+  name: string;
+  chatIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface WaTemplate {
   _id: string;
   name: string;

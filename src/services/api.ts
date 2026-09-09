@@ -1,4 +1,4 @@
-import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse, WaOverview, WaGroup, WaTemplate, WaCampaign, WaFunnelResponse, WaSettings, WaMembersOverlap, PromoResponse, PromoCandidate } from '../data/types';
+import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse, WaOverview, WaGroup, WaGroupBundle, WaTemplate, WaCampaign, WaFunnelResponse, WaSettings, WaMembersOverlap, PromoResponse, PromoCandidate } from '../data/types';
 import { SeoPageConfig } from '../lib/seoparties';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -752,6 +752,20 @@ export const cancelWaCampaign = (id: string): Promise<void> =>
 
 export const resumeWaCampaign = (id: string): Promise<void> =>
   waFetch(`/campaigns/${id}/resume`, { method: 'POST' });
+
+export const getWaBundles = async (): Promise<WaGroupBundle[]> => {
+  const data = await waFetch('/bundles');
+  return Array.isArray(data.bundles) ? data.bundles : [];
+};
+
+export const createWaBundle = (name: string, chatIds: string[]): Promise<WaGroupBundle> =>
+  waFetch('/bundles', { method: 'POST', body: JSON.stringify({ name, chatIds }) });
+
+export const updateWaBundle = (id: string, name: string, chatIds: string[]): Promise<void> =>
+  waFetch(`/bundles/${id}`, { method: 'PATCH', body: JSON.stringify({ name, chatIds }) });
+
+export const deleteWaBundle = (id: string): Promise<void> =>
+  waFetch(`/bundles/${id}`, { method: 'DELETE' });
 
 export const getWaMembersOverlap = (limit?: number): Promise<WaMembersOverlap> =>
   waFetch(`/members/overlap${limit != null ? `?limit=${limit}` : ''}`);
