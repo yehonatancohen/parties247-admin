@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import * as api from '../services/api';
 import { WaOverview, WaGroup, WaGroupBundle, WaTemplate, WaCampaign, WaFunnelResponse, WaMembersOverlap, WaSendFact } from '../data/types';
 import { useParties } from '../hooks/useParties';
@@ -142,16 +143,16 @@ const OverviewTab: React.FC = () => {
 
 // --- New Send -----------------------------------------------------------
 
-const SendTab: React.FC = () => {
+const SendTab: React.FC<{ prefill?: { partyId: string; text: string } | null }> = ({ prefill }) => {
   const { parties } = useParties();
   const [groups, setGroups] = useState<WaGroup[]>([]);
   const [templates, setTemplates] = useState<WaTemplate[]>([]);
   const [bundles, setBundles] = useState<WaGroupBundle[]>([]);
   const [newBundleName, setNewBundleName] = useState('');
   const [savingBundle, setSavingBundle] = useState(false);
-  const [partyId, setPartyId] = useState('');
+  const [partyId, setPartyId] = useState(prefill?.partyId ?? '');
   const [templateId, setTemplateId] = useState('');
-  const [text, setText] = useState('');
+  const [text, setText] = useState(prefill?.text ?? '');
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
   const [scheduleNow, setScheduleNow] = useState(true);
   const [scheduledFor, setScheduledFor] = useState('');
@@ -863,8 +864,31 @@ const DataTab: React.FC = () => {
 
 // --- Root -----------------------------------------------------------------
 
+const isWaTab = (value: string | null): value is WaTab =>
+  !!value && TABS.some((t) => t.key === value);
+
 const AdminWhatsApp: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<WaTab>('overview');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const tabParam = searchParams.get('tab');
+  const partyIdParam = searchParams.get('partyId');
+  const textParam = searchParams.get('text');
+
+  const [activeTab, setActiveTab] = useState<WaTab>(isWaTab(tabParam) ? tabParam : 'overview');
+  // Captured once on mount so navigating between tabs afterwards doesn't
+  // keep re-seeding the form from a stale URL.
+  const [sendPrefill] = useState(() =>
+    partyIdParam && textParam ? { partyId: partyIdParam, text: textParam } : null
+  );
+
+  useEffect(() => {
+    if (tabParam || partyIdParam || textParam) {
+      router.replace('/whatsapp', { scroll: false });
+    }
+    // Only strip the incoming query string once, right after reading it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="bg-jungle-surface p-6 rounded-lg shadow-lg border border-wood-brown w-full space-y-6">
@@ -885,7 +909,7 @@ const AdminWhatsApp: React.FC = () => {
       </div>
 
       {activeTab === 'overview' && <OverviewTab />}
-      {activeTab === 'send' && <SendTab />}
+      {activeTab === 'send' && <SendTab prefill={sendPrefill} />}
       {activeTab === 'campaigns' && <CampaignsTab />}
       {activeTab === 'groups' && <GroupsTab />}
       {activeTab === 'templates' && <TemplatesTab />}

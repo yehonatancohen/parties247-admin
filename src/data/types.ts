@@ -466,7 +466,8 @@ export interface PromoCandidate {
   score: number;
   url: string;           // GoOut link carrying our referral code
   siteUrl: string | null;
-  message: string;       // ready-to-paste WhatsApp text
+  message: string;       // ready-to-paste WhatsApp text (links to siteUrl)
+  campaignTemplate: string; // same message ending in a literal {link} placeholder, for the WhatsApp "New Send" tab
 }
 
 export interface PromoResponse {

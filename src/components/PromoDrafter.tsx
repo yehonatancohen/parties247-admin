@@ -1,5 +1,6 @@
 "use client"
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import * as api from '@/services/api';
 import { PromoCandidate, PromoResponse } from '@/data/types';
 import LoadingSpinner from './LoadingSpinner';
@@ -56,6 +57,16 @@ const CandidateCard = ({
   // Parent remounts this card (key includes generatedAt) whenever a fresh
   // draft arrives, so local edits never go stale without an effect.
   const [text, setText] = useState(candidate.message);
+  const router = useRouter();
+
+  const promoteViaCampaign = () => {
+    const params = new URLSearchParams({
+      tab: 'send',
+      partyId: candidate.partyId,
+      text: candidate.campaignTemplate,
+    });
+    router.push(`/whatsapp?${params.toString()}`);
+  };
 
   return (
     <div className="bg-jungle-surface border border-wood-brown rounded-2xl shadow-lg p-5 flex flex-col gap-3">
@@ -102,6 +113,13 @@ const CandidateCard = ({
       />
 
       <div className="flex items-center gap-2 flex-wrap">
+        <button
+          onClick={promoteViaCampaign}
+          className="bg-jungle-lime text-jungle-deep font-bold py-2 px-4 rounded-md hover:opacity-90 transition-opacity text-sm"
+          title="פותח את טאב 'שליחה חדשה' בוואטסאפ עם המסיבה והטקסט כבר ממולאים — רק לבחור קבוצות ולשלוח"
+        >
+          🚀 קדם בקמפיין
+        </button>
         <button
           onClick={() => onCopy(candidate.partyId, text)}
           className="bg-jungle-accent text-white font-bold py-2 px-4 rounded-md hover:opacity-90 transition-opacity text-sm"
