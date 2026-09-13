@@ -818,6 +818,7 @@ export const getWhatsappPromo = async (days: number = 7, limit: number = 12): Pr
     url: String(c?.url ?? ''),
     siteUrl: typeof c?.siteUrl === 'string' ? c.siteUrl : null,
     message: String(c?.message ?? ''),
+    campaignTemplate: String(c?.campaignTemplate ?? ''),
   }));
   return {
     days: normalizeCount(data.days) || days,
