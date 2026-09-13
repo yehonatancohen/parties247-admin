@@ -59,11 +59,20 @@ const CandidateCard = ({
   const [text, setText] = useState(candidate.message);
   const router = useRouter();
 
+  // Carry over any edits the admin made in the textarea above by swapping the
+  // resolved site link back out for the {link} placeholder the campaign
+  // engine expects; falls back to the untouched template if that link isn't
+  // found verbatim (edited away, or the API response is missing it).
   const promoteViaCampaign = () => {
+    if (!candidate.campaignTemplate) return;
+    const templateText =
+      candidate.siteUrl && text.includes(candidate.siteUrl)
+        ? text.replace(candidate.siteUrl, '{link}')
+        : candidate.campaignTemplate;
     const params = new URLSearchParams({
       tab: 'send',
       partyId: candidate.partyId,
-      text: candidate.campaignTemplate,
+      text: templateText,
     });
     router.push(`/whatsapp?${params.toString()}`);
   };
@@ -115,7 +124,8 @@ const CandidateCard = ({
       <div className="flex items-center gap-2 flex-wrap">
         <button
           onClick={promoteViaCampaign}
-          className="bg-jungle-lime text-jungle-deep font-bold py-2 px-4 rounded-md hover:opacity-90 transition-opacity text-sm"
+          disabled={!candidate.campaignTemplate}
+          className="bg-jungle-lime text-jungle-deep font-bold py-2 px-4 rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity text-sm"
           title="פותח את טאב 'שליחה חדשה' בוואטסאפ עם המסיבה והטקסט כבר ממולאים — רק לבחור קבוצות ולשלוח"
         >
           🚀 קדם בקמפיין
