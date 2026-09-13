@@ -1,4 +1,4 @@
-import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse, WaOverview, WaGroup, WaGroupBundle, WaTemplate, WaCampaign, WaFunnelResponse, WaSettings, WaMembersOverlap, PromoResponse, PromoCandidate } from '../data/types';
+import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse, WaOverview, WaGroup, WaGroupBundle, WaTemplate, WaCampaign, WaFunnelResponse, WaSettings, WaMembersOverlap, WaSendFact, PromoResponse, PromoCandidate } from '../data/types';
 import { SeoPageConfig } from '../lib/seoparties';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -779,6 +779,15 @@ export const getWaFunnel = (partyId?: string, days?: number): Promise<WaFunnelRe
   if (days != null) params.set('days', String(days));
   const query = params.toString();
   return waFetch(`/funnel${query ? `?${query}` : ''}`);
+};
+
+// One row per (campaign, group): frozen send-time context joined with
+// windowed click/buy-click/sales outcomes — see backend wa_facts.py. The
+// dataset behind the future send-time/group recommender; this page only
+// displays it, nothing here scores or ranks yet.
+export const getWaSendFacts = async (days: number = 14): Promise<WaSendFact[]> => {
+  const data = await waFetch(`/facts?days=${days}`);
+  return Array.isArray(data.facts) ? data.facts : [];
 };
 
 // --- WhatsApp promo drafter ---

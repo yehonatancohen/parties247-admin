@@ -378,6 +378,72 @@ export interface WaFunnelResponse {
   };
 }
 
+// --- WhatsApp send facts (/api/admin/wa/facts) ---
+// One row per (campaign, group): frozen send-time context joined with
+// windowed outcomes. Field names mirror backend wa_facts.py's dict verbatim
+// (same convention as the rest of this file's WhatsApp types). The dataset
+// behind the future send-time/group recommender — this page only displays
+// it.
+
+export interface WaSendFactParty {
+  goOutEventId: string | null;
+  tier: PromoTier;
+  expectedPerTicket: number;
+  ticketPrice: number | null;
+  musicType: string | null;
+  eventType: string | null;
+  age: string | null;
+  areas: string[];
+  region: string | null;
+  partyStartsAt: string | null;
+  hoursUntilParty: number | null;
+  ticketsSoldBefore: number;
+}
+
+export interface WaSendFactMessage {
+  length: number;
+  lineCount: number;
+  emojiCount: number;
+  hasPrice: boolean;
+  textHash: string;
+}
+
+export interface WaSendFactGroup {
+  chatId: string;
+  memberCount: number | null;
+  kind: string;
+  sendsToGroupLast7d: number;
+}
+
+export interface WaSendFactSales {
+  attribution: 'time-window';
+  note: string;
+  baselineAcceptedPer24h: number | null;
+  acceptedDelta6h: number | null;
+  acceptedDelta24h: number | null;
+  estCommission6h: number | null;
+  estCommission24h: number | null;
+}
+
+export interface WaSendFact {
+  campaignId: string;
+  chatId: string;
+  code: string | null;
+  partyId: string | null;
+  partySlug: string | null;
+  sentAt: string;
+  localHour: number | null;
+  localDow: number | null;
+  party: WaSendFactParty;
+  message: WaSendFactMessage;
+  group: WaSendFactGroup;
+  outcomes: Record<string, number>; // clicks_1h, buyClicks_6h, reactions_24h, replies_72h, ...
+  uniqueClickers: number;
+  crossPartyBuyClicks: number;
+  sales: WaSendFactSales;
+  updatedAt: string;
+}
+
 // --- WhatsApp promo drafter (/api/admin/promo/whatsapp) ---
 
 export type PromoTier = 'account1' | 'account2';

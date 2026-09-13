@@ -2,11 +2,11 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import * as api from '../services/api';
-import { WaOverview, WaGroup, WaGroupBundle, WaTemplate, WaCampaign, WaFunnelResponse, WaMembersOverlap } from '../data/types';
+import { WaOverview, WaGroup, WaGroupBundle, WaTemplate, WaCampaign, WaFunnelResponse, WaMembersOverlap, WaSendFact } from '../data/types';
 import { useParties } from '../hooks/useParties';
 import LoadingSpinner from './LoadingSpinner';
 
-type WaTab = 'overview' | 'send' | 'campaigns' | 'groups' | 'templates' | 'members';
+type WaTab = 'overview' | 'send' | 'campaigns' | 'groups' | 'templates' | 'members' | 'data';
 
 const TABS: { key: WaTab; label: string }[] = [
   { key: 'overview', label: 'סקירה' },
@@ -15,6 +15,7 @@ const TABS: { key: WaTab; label: string }[] = [
   { key: 'groups', label: 'קבוצות' },
   { key: 'templates', label: 'תבניות' },
   { key: 'members', label: 'חברים' },
+  { key: 'data', label: 'נתונים' },
 ];
 
 const STATUS_LABELS: Record<string, string> = {
@@ -731,6 +732,135 @@ const MembersTab: React.FC = () => {
   );
 };
 
+// --- Data (send facts) ------------------------------------------------
+
+const TIER_LABELS: Record<string, string> = { account1: 'שותף (account1)', account2: 'כללי (account2)' };
+
+const formatRelativeAge = (iso: string | null | undefined): string => {
+  if (!iso) return '—';
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return '—';
+  const minutes = Math.round(ms / 60000);
+  if (minutes < 60) return `לפני ${minutes} דק׳`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return `לפני ${hours} שעות`;
+  return `לפני ${Math.round(hours / 24)} ימים`;
+};
+
+const DataTab: React.FC = () => {
+  const [facts, setFacts] = useState<WaSendFact[]>([]);
+  const [groups, setGroups] = useState<WaGroup[]>([]);
+  const [overview, setOverview] = useState<WaOverview | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([api.getWaSendFacts(14), api.getWaGroups(), api.getWaOverview()])
+      .then(([f, g, o]) => {
+        if (cancelled) return;
+        setFacts(f);
+        setGroups(g);
+        setOverview(o);
+      })
+      .catch((err) => !cancelled && setError(err instanceof Error ? err.message : 'שגיאה בטעינת נתונים'))
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) return <div className="p-6 flex justify-center"><LoadingSpinner /></div>;
+  if (error) return <div className="p-3 bg-red-500/10 text-red-300 rounded-lg border border-red-500/30 text-sm">{error}</div>;
+
+  const groupNames = new Map(groups.map((g) => [g.chatId, g.name]));
+  const sorted = [...facts].sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+  const lastSnapshotAt = facts.reduce<string | null>((latest, f) => (
+    !latest || new Date(f.updatedAt).getTime() > new Date(latest).getTime() ? f.updatedAt : latest
+  ), null);
+  const missingFeaturesShare = facts.length
+    ? Math.round((facts.filter((f) => !f.party.goOutEventId).length / facts.length) * 100)
+    : 0;
+  const engineStale = !overview?.engineHeartbeat ||
+    Date.now() - new Date(overview.engineHeartbeat).getTime() > 20 * 60 * 1000;
+
+  return (
+    <div className="space-y-6">
+      <div className="text-xs text-jungle-text/50">
+        שורה אחת לכל (קמפיין, קבוצה): הקשר קפוא בזמן השליחה + תוצאות בחלונות זמן. הבסיס לבניית המלצה עתידית
+        (&quot;לשלוח את המסיבה הזו לקבוצה הזו בשעה הזו&quot;) — כרגע רק תצוגה, בלי דירוג.
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-jungle-surface p-3 rounded-lg border border-wood-brown">
+          <div className="text-xs text-jungle-text/50">עדכון נתוני מכירות אחרון</div>
+          <div className="text-lg font-bold text-jungle-text">{formatRelativeAge(lastSnapshotAt)}</div>
+        </div>
+        <div className="bg-jungle-surface p-3 rounded-lg border border-wood-brown">
+          <div className="text-xs text-jungle-text/50">מנוע וואטסאפ</div>
+          <div className={`text-lg font-bold ${engineStale ? 'text-red-400' : 'text-jungle-lime'}`}>
+            {overview?.engineHeartbeat ? formatRelativeAge(overview.engineHeartbeat) : 'לא ידוע'}
+          </div>
+        </div>
+        <div className="bg-jungle-surface p-3 rounded-lg border border-wood-brown">
+          <div className="text-xs text-jungle-text/50">שורות (14 יום)</div>
+          <div className="text-lg font-bold text-jungle-text">{facts.length}</div>
+        </div>
+        <div className="bg-jungle-surface p-3 rounded-lg border border-wood-brown">
+          <div className="text-xs text-jungle-text/50">חסרות זיהוי מסיבה ב-GoOut</div>
+          <div className={`text-lg font-bold ${missingFeaturesShare > 20 ? 'text-amber-400' : 'text-jungle-text'}`}>
+            {missingFeaturesShare}%
+          </div>
+        </div>
+      </div>
+
+      {facts.length === 0 ? (
+        <div className="p-6 text-center text-jungle-text/50">אין עדיין נתוני שליחה (יופיע אחרי הקמפיין הראשון שנשלח בפועל)</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-jungle-text/50 text-xs border-b border-wood-brown">
+                <th className="text-right py-2 px-3">קבוצה</th>
+                <th className="text-right py-2 px-3">מסיבה</th>
+                <th className="text-right py-2 px-3">רמה</th>
+                <th className="text-right py-2 px-3">נשלח</th>
+                <th className="text-right py-2 px-3">חברים</th>
+                <th className="text-right py-2 px-3">קליקים/100</th>
+                <th className="text-right py-2 px-3">קליקי קנייה</th>
+                <th className="text-right py-2 px-3">₪ משוער (24ש׳)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((f) => {
+                const memberCount = f.group.memberCount;
+                const clicks24h = f.outcomes['clicks_24h'] ?? 0;
+                const buyClicks24h = f.outcomes['buyClicks_24h'] ?? 0;
+                const clicksPer100 = memberCount ? Math.round((clicks24h / memberCount) * 1000) / 10 : null;
+                return (
+                  <tr key={`${f.campaignId}-${f.chatId}`} className="border-b border-wood-brown/50">
+                    <td className="py-2 px-3 text-jungle-text">{groupNames.get(f.chatId) || f.chatId}</td>
+                    <td className="py-2 px-3 text-jungle-text/70">{f.partySlug || f.partyId || '—'}</td>
+                    <td className="py-2 px-3 text-jungle-text/60">{TIER_LABELS[f.party.tier] || f.party.tier}</td>
+                    <td className="py-2 px-3 text-jungle-text/60">{new Date(f.sentAt).toLocaleString('he-IL')}</td>
+                    <td className="py-2 px-3 text-jungle-text/60">{memberCount ?? '—'}</td>
+                    <td className="py-2 px-3 text-jungle-text/60">{clicksPer100 ?? '—'}</td>
+                    <td className="py-2 px-3 text-jungle-text/60">{buyClicks24h}</td>
+                    <td className="py-2 px-3 text-jungle-lime font-semibold">
+                      {f.sales.estCommission24h != null ? `₪${f.sales.estCommission24h.toFixed(0)}` : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div className="text-[11px] text-jungle-text/40">
+        {facts[0]?.sales.note || 'הכנסה משוערת מבוססת על מתאם זמן, לא ייחוס מאומת — ל-GoOut אין ייחוס לפי קישור.'}
+      </div>
+    </div>
+  );
+};
+
 // --- Root -----------------------------------------------------------------
 
 const AdminWhatsApp: React.FC = () => {
@@ -760,6 +890,7 @@ const AdminWhatsApp: React.FC = () => {
       {activeTab === 'groups' && <GroupsTab />}
       {activeTab === 'templates' && <TemplatesTab />}
       {activeTab === 'members' && <MembersTab />}
+      {activeTab === 'data' && <DataTab />}
     </div>
   );
 };
