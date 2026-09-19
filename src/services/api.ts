@@ -656,6 +656,39 @@ export const getPartyFunnel = async (days: number = 30, realMonth: string = 'all
   };
 };
 
+export type AttributionChannel = {
+  channel: string;
+  views: number;
+  viewSessions: number;
+  redirects: number;
+  redirectSessions: number;
+  clickOutRate: number | null;
+  estRevenue: number;
+};
+
+export type AttributionResponse = {
+  days: number;
+  trackingSince: string | null;
+  channels: AttributionChannel[];
+  unattributedRevenue: number;
+  note: string;
+};
+
+export const getAttribution = async (days: number = 30): Promise<AttributionResponse> => {
+  const response = await fetch(`${API_URL}/admin/analytics/attribution?days=${days}`, {
+    headers: { ...getAuthHeader() },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || 'Failed to fetch attribution analytics');
+  return {
+    days: normalizeCount(data.days) || days,
+    trackingSince: typeof data.trackingSince === 'string' ? data.trackingSince : null,
+    channels: Array.isArray(data.channels) ? data.channels : [],
+    unattributedRevenue: typeof data.unattributedRevenue === 'number' ? data.unattributedRevenue : 0,
+    note: typeof data.note === 'string' ? data.note : '',
+  };
+};
+
 export const getAuditLog = async (
   filters: { actions?: string[]; limit?: number; offset?: number } = {}
 ): Promise<AuditLogResponse> => {
