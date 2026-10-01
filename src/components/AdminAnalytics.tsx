@@ -132,6 +132,7 @@ type MergedPartyRow = {
   purchases: number;
   redirectToPurchaseRate: number | null;
   revenue: number;
+  lifetimeCommission: number | null;
   realGoOutRevenue: number | null;
   totalTicketsSold: number | null;
 };
@@ -621,9 +622,9 @@ const AdminAnalytics: React.FC = () => {
     };
   }, [summary]);
 
-  // One row per party: site analytics + windowed GoOut tickets/commission +
-  // real GoOut snapshot. All of it is scoped to realMonthFilter (event date
-  // calendar month, Asia/Jerusalem) — not a rolling day window.
+  // One row per party: click metrics and new sale deltas are windowed by the
+  // funnel range; lifetime tickets/commission and GoOut gross are cumulative
+  // for events in realMonthFilter (event date, Asia/Jerusalem).
   const mergedPartyRows: MergedPartyRow[] = useMemo(() => {
     if (!funnel) return [];
     const now = Date.now();
@@ -652,6 +653,7 @@ const AdminAnalytics: React.FC = () => {
           purchases: row.purchases,
           redirectToPurchaseRate: row.redirectToPurchaseRate,
           revenue: row.revenue,
+          lifetimeCommission: sales?.totalRevenue ?? null,
           realGoOutRevenue: row.realGoOutRevenue,
           totalTicketsSold: sales?.totalTicketsSold ?? null,
         };
@@ -678,10 +680,9 @@ const AdminAnalytics: React.FC = () => {
     return Array.from(set).sort();
   }, [funnel]);
 
-  // Headlines unique-by-party (already unique-by-goOutEventId on the backend
-  // funnel) for the selected calendar month. Do not use siteWide.purchases/
-  // revenue/views when a month is selected — those stay on the rolling `days`
-  // window and only real Go-Out used to move.
+  // Click activity uses the selected activity window. Ticket sales and earned
+  // commission come from the lifetime sales snapshot for events in the chosen
+  // calendar month, matching GoOut's cumulative revenue counter.
   const monthScopedTotals = useMemo(() => {
     const views = mergedPartyRows.reduce((s, r) => s + r.views, 0);
     const redirects = mergedPartyRows.reduce((s, r) => s + r.redirects, 0);
@@ -690,11 +691,13 @@ const AdminAnalytics: React.FC = () => {
     const realGoOutViews = mergedPartyRows.reduce((s, r) => s + (r.realGoOutViews ?? 0), 0);
     const realGoOutRevenue = mergedPartyRows.reduce((s, r) => s + (r.realGoOutRevenue ?? 0), 0);
     const tickets = mergedPartyRows.reduce((s, r) => s + (r.totalTicketsSold ?? r.purchases), 0);
+    const lifetimeCommission = mergedPartyRows.reduce((s, r) => s + (r.lifetimeCommission ?? r.revenue), 0);
     return {
       views,
       redirects,
       purchases,
       revenue,
+      lifetimeCommission,
       realGoOutViews,
       realGoOutRevenue,
       tickets,
@@ -704,8 +707,9 @@ const AdminAnalytics: React.FC = () => {
   }, [mergedPartyRows]);
 
   const topSellingRows = useMemo(() => [...mergedPartyRows]
-    .filter(row => row.purchases > 0 || row.revenue > 0 || (row.realGoOutRevenue ?? 0) > 0)
-    .sort((a, b) => b.purchases - a.purchases || b.revenue - a.revenue)
+    .filter(row => (row.totalTicketsSold ?? row.purchases) > 0 || (row.lifetimeCommission ?? row.revenue) > 0 || (row.realGoOutRevenue ?? 0) > 0)
+    .sort((a, b) => (b.totalTicketsSold ?? b.purchases) - (a.totalTicketsSold ?? a.purchases)
+      || (b.lifetimeCommission ?? b.revenue) - (a.lifetimeCommission ?? a.revenue))
     .slice(0, 10), [mergedPartyRows]);
 
   useEffect(() => {
@@ -825,15 +829,15 @@ const AdminAnalytics: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard
               title="כרטיסים שנמכרו"
-              value={funnel ? formatNumber(monthScopedTotals.purchases) : '…'}
-              subtext="מכירות מאושרות בטווח שנבחר"
+              value={funnel ? formatNumber(monthScopedTotals.tickets) : '…'}
+              subtext="סך מצטבר למסיבות בחודש הנבחר"
               icon={TicketIcon}
               colorClass="bg-yellow-400"
             />
             <KpiCard
               title="עמלה שלנו"
-              value={funnel ? `₪${formatNumber(monthScopedTotals.revenue)}` : '…'}
-              subtext="הכנסה מחושבת בטווח שנבחר"
+              value={funnel ? `₪${formatNumber(monthScopedTotals.lifetimeCommission)}` : '…'}
+              subtext="עמלה מצטברת למסיבות בחודש הנבחר"
               icon={MegaphoneIcon}
               colorClass="bg-jungle-lime"
             />
@@ -858,7 +862,7 @@ const AdminAnalytics: React.FC = () => {
               <div>
                 <h3 id="sales-by-party-title" className="text-xl text-jungle-text font-bold">מכירות לפי מסיבה</h3>
                 <p className="text-xs text-jungle-text/55 mt-1">
-                  המסיבות לפי חודש האירוע; כרטיסים ועמלה לפי טווח הפעילות, ומחזור GoOut הוא נתון מצטבר
+                  כרטיסים ועמלה מצטברים לכל חיי המסיבות בחודש הנבחר; קליקים לפי טווח הפעילות, ומחזור GoOut הוא נתון מצטבר
                 </p>
                 <div aria-label="סינון לפי חודש אירוע" className="flex max-w-full overflow-x-auto bg-jungle-deep rounded-lg p-1 border border-wood-brown gap-1 mt-4">
                   <button
@@ -890,9 +894,9 @@ const AdminAnalytics: React.FC = () => {
                   <thead>
                     <tr className="text-right text-xs text-jungle-text/50 border-b border-wood-brown/60">
                       <th className="py-2 px-3 font-medium">מסיבה</th>
-                      <th className="py-2 px-3 font-medium">כרטיסים</th>
+                      <th className="py-2 px-3 font-medium">כרטיסים שנמכרו</th>
                       <th className="py-2 px-3 font-medium">קליקים ל־GoOut</th>
-                      <th className="py-2 px-3 font-medium">עמלה שלנו</th>
+                      <th className="py-2 px-3 font-medium">עמלה מצטברת</th>
                       <th className="py-2 px-3 font-medium">מחזור GoOut</th>
                     </tr>
                   </thead>
@@ -900,9 +904,9 @@ const AdminAnalytics: React.FC = () => {
                     {topSellingRows.map(row => (
                       <tr key={row.partyId} className="border-b border-wood-brown/30 last:border-0 hover:bg-white/[0.025]">
                         <td className="py-3 px-3 text-jungle-text font-medium max-w-[280px] truncate">{row.name || 'מסיבה ללא שם'}</td>
-                        <td className="py-3 px-3 text-yellow-300 font-semibold tabular-nums">{formatNumber(row.purchases)}</td>
+                        <td className="py-3 px-3 text-yellow-300 font-semibold tabular-nums">{formatNumber(row.totalTicketsSold ?? row.purchases)}</td>
                         <td className="py-3 px-3 text-jungle-lime tabular-nums">{formatNumber(row.redirects)}</td>
-                        <td className="py-3 px-3 text-jungle-lime tabular-nums">₪{formatNumber(row.revenue)}</td>
+                        <td className="py-3 px-3 text-jungle-lime tabular-nums">₪{formatNumber(row.lifetimeCommission ?? row.revenue)}</td>
                         <td className="py-3 px-3 text-blue-300 tabular-nums">{row.realGoOutRevenue == null ? '—' : `₪${formatNumber(row.realGoOutRevenue)}`}</td>
                       </tr>
                     ))}
