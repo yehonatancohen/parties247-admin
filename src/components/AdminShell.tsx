@@ -12,7 +12,6 @@ const navItems = [
   { href: '/analytics', end: false, label: 'אנליטיקס' },
   { href: '/attribution', end: false, label: 'מקורות רכישה' },
   { href: '/whatsapp', end: false, label: 'וואטסאפ' },
-  { href: '/promo', end: false, label: 'קידום בוואטסאפ' },
   { href: '/audit-log', end: false, label: 'יומן פעולות' },
 ];
 

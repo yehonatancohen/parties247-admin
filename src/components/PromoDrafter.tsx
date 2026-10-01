@@ -98,7 +98,9 @@ const CandidateCard = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+      <details className="text-sm text-jungle-text/70">
+        <summary className="cursor-pointer">נתוני קידום</summary>
+      <div className="grid grid-cols-3 gap-2 text-center text-xs mt-3">
         <div className="bg-jungle-deep rounded-lg p-2">
           <p className="text-jungle-text/50">עמלה לכרטיס</p>
           <p className="text-jungle-text font-semibold">{formatCurrency(candidate.expectedPerTicket)}</p>
@@ -112,6 +114,7 @@ const CandidateCard = ({
           <p className="text-jungle-text font-semibold">{candidate.daysUntil < 1 ? 'היום' : `${Math.ceil(candidate.daysUntil)} ימים`}</p>
         </div>
       </div>
+      </details>
 
       <textarea
         dir="rtl"
@@ -216,9 +219,9 @@ const PromoDrafter: React.FC = () => {
     <div className="space-y-6" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-display text-jungle-text">קידום בוואטסאפ</h2>
+          <h3 className="text-xl font-display text-jungle-text">הודעות מוכנות לקידום</h3>
           <p className="text-sm text-jungle-text/60 mt-1">
-            המסיבות שהכי שווה לדחוף עכשיו, לפי העמלה הצפויה (שותפים ₪25 לכרטיס קודם), מכירות אחרונות ודחיפות.
+            בחר מסיבה, ערוך הודעה ושלח לקבוצות.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -254,8 +257,10 @@ const PromoDrafter: React.FC = () => {
         </div>
       ) : data ? (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 bg-jungle-surface border border-wood-brown rounded-2xl shadow-lg p-5">
+          <details className="border-b border-wood-brown pb-4">
+            <summary className="cursor-pointer text-jungle-text/70 text-sm">הודעת סיכום ונתוני קידום</summary>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-4">
+            <div className="lg:col-span-2 space-y-3">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold text-jungle-lime">הודעת סיכום לקבוצות</h3>
                 <div className="flex gap-2">
@@ -283,7 +288,7 @@ const PromoDrafter: React.FC = () => {
                 className="w-full bg-jungle-deep text-jungle-text text-sm p-3 rounded-lg border border-wood-brown focus:ring-2 focus:ring-jungle-accent focus:outline-none leading-relaxed"
               />
             </div>
-            <div className="bg-jungle-surface border border-wood-brown rounded-2xl shadow-lg p-5 space-y-3">
+            <div className="space-y-3">
               <h3 className="text-lg font-semibold text-jungle-lime">מה יש כאן</h3>
               <div className="flex justify-between text-sm"><span className="text-jungle-text/60">מסיבות מוצעות</span><span className="text-jungle-text font-semibold">{totals.count}</span></div>
               <div className="flex justify-between text-sm"><span className="text-jungle-text/60">מתוכן של שותפים (₪25)</span><span className="text-yellow-300 font-semibold">{totals.account1}</span></div>
@@ -294,6 +299,7 @@ const PromoDrafter: React.FC = () => {
               </p>
             </div>
           </div>
+          </details>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {data.candidates.map((candidate, index) => (

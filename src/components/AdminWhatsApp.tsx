@@ -6,10 +6,12 @@ import * as api from '../services/api';
 import { WaOverview, WaGroup, WaGroupBundle, WaTemplate, WaCampaign, WaFunnelResponse, WaMembersOverlap, WaSendFact } from '../data/types';
 import { useParties } from '../hooks/useParties';
 import LoadingSpinner from './LoadingSpinner';
+import PromoDrafter from './PromoDrafter';
 
-type WaTab = 'overview' | 'send' | 'campaigns' | 'groups' | 'templates' | 'members' | 'data';
+type WaTab = 'promo' | 'overview' | 'send' | 'campaigns' | 'groups' | 'templates' | 'members' | 'data';
 
 const TABS: { key: WaTab; label: string }[] = [
+  { key: 'promo', label: 'הודעות לקידום' },
   { key: 'overview', label: 'סקירה' },
   { key: 'send', label: 'שליחה חדשה' },
   { key: 'campaigns', label: 'קמפיינים' },
@@ -875,30 +877,23 @@ const AdminWhatsApp: React.FC = () => {
   const partyIdParam = searchParams.get('partyId');
   const textParam = searchParams.get('text');
 
-  const [activeTab, setActiveTab] = useState<WaTab>(isWaTab(tabParam) ? tabParam : 'overview');
-  // Captured once on mount so navigating between tabs afterwards doesn't
-  // keep re-seeding the form from a stale URL.
-  const [sendPrefill] = useState(() =>
-    partyIdParam && textParam ? { partyId: partyIdParam, text: textParam } : null
-  );
-
-  useEffect(() => {
-    if (tabParam || partyIdParam || textParam) {
-      router.replace('/whatsapp', { scroll: false });
-    }
-    // Only strip the incoming query string once, right after reading it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const activeTab = isWaTab(tabParam) ? tabParam : 'promo';
+  // Read navigation updates too: promo and send now share the same page.
+  const sendPrefill = partyIdParam && textParam ? { partyId: partyIdParam, text: textParam } : null;
+  const selectTab = (tab: WaTab) => router.push(`/whatsapp?tab=${tab}`, { scroll: false });
+  const primaryTabs = TABS.filter((tab) => ['promo', 'send', 'campaigns'].includes(tab.key));
+  const advancedTabs = TABS.filter((tab) => !['promo', 'send', 'campaigns'].includes(tab.key));
 
   return (
-    <div className="bg-jungle-surface p-6 rounded-lg shadow-lg border border-wood-brown w-full space-y-6">
+    <div className="w-full space-y-6" dir="rtl">
       <h2 className="text-3xl font-display text-jungle-text">וואטסאפ</h2>
 
       <div className="flex flex-wrap gap-1 bg-jungle-deep p-1.5 rounded-lg border border-wood-brown">
-        {TABS.map((tab) => (
+        {primaryTabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => selectTab(tab.key)}
+            aria-pressed={activeTab === tab.key}
             className={`px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
               activeTab === tab.key ? 'bg-jungle-accent text-white' : 'text-jungle-text/60 hover:text-jungle-text hover:bg-white/5'
             }`}
@@ -908,6 +903,19 @@ const AdminWhatsApp: React.FC = () => {
         ))}
       </div>
 
+      <details open={advancedTabs.some((tab) => tab.key === activeTab)} className="border-b border-wood-brown pb-3">
+        <summary className="cursor-pointer text-sm text-jungle-text/70 py-2">ניהול ונתונים</summary>
+        <div className="flex flex-wrap gap-2 pt-2">
+          {advancedTabs.map((tab) => (
+            <button key={tab.key} onClick={() => selectTab(tab.key)} aria-pressed={activeTab === tab.key}
+              className={`px-4 py-2 rounded-md text-sm font-semibold transition-colors ${activeTab === tab.key ? 'bg-jungle-accent text-white' : 'text-jungle-text/70 hover:bg-white/5'}`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </details>
+
+      {activeTab === 'promo' && <PromoDrafter />}
       {activeTab === 'overview' && <OverviewTab />}
       {activeTab === 'send' && <SendTab prefill={sendPrefill} />}
       {activeTab === 'campaigns' && <CampaignsTab />}

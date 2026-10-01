@@ -8,6 +8,14 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  async redirects() {
+    return [{ source: '/promo', destination: '/whatsapp', permanent: true }];
+  },
+  async rewrites() {
+    return process.env.NODE_ENV === 'development'
+      ? [{ source: '/api/:path*', destination: 'https://parties247-backend.onrender.com/api/:path*' }]
+      : [];
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.go-out.co' },
