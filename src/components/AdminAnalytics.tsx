@@ -960,16 +960,16 @@ const AdminAnalytics: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex-1 bg-yellow-400/10 border border-yellow-400/20 rounded-xl p-4 text-center">
-                    <p className="text-xs text-jungle-text/60 mb-1">🎉 רכישות ב-GoOut</p>
-                    <p className="text-3xl font-bold text-yellow-400 font-mono">{formatNumber(monthScopedTotals.purchases)}</p>
-                    {monthScopedTotals.revenue > 0 && (
-                      <p className="text-xs text-jungle-text/50 mt-1">₪{formatNumber(monthScopedTotals.revenue)}</p>
+                    <p className="text-xs text-jungle-text/60 mb-1">🎉 כרטיסים שנמכרו ב-GoOut</p>
+                    <p className="text-3xl font-bold text-yellow-400 font-mono">{formatNumber(monthScopedTotals.tickets)}</p>
+                    {monthScopedTotals.lifetimeCommission > 0 && (
+                      <p className="text-xs text-jungle-text/50 mt-1">עמלה מצטברת: ₪{formatNumber(monthScopedTotals.lifetimeCommission)}</p>
                     )}
                   </div>
                 </div>
                 <p className="text-xs text-jungle-text/40 mt-2">
-                  כל המספרים במשפך (צפיות, קליקים, רכישות, עמלה, ומחזור GoOut) מסוננים לפי חודש האירוע.
-                  ברירת המחדל היא החודש הנוכחי (ישראל). "צפיות ב-GoOut" ו"מחזור מכירות אמיתי" הם מונים מצטברים של GoOut לכל אירוע בחודש שנבחר.
+                  כרטיסים, עמלה ומחזור GoOut הם נתונים מצטברים לכל חיי המסיבות בחודש האירוע שנבחר. הקליקים ושיעור ההמרה משקפים את טווח הפעילות שנבחר.
+                  ברירת המחדל היא החודש הנוכחי (ישראל).
                 </p>
               </>
             )}
