@@ -34,6 +34,26 @@ type RangeFilter = '24h' | '7d' | '30d';
 
 const PAGE_SIZE = 20;
 
+const activityCacheKey = (f: { filter: ActivityFilter; device: DeviceFilter; source: SourceFilter; range: RangeFilter }) =>
+    `parties247:activity:${f.filter}:${f.device}:${f.source}:${f.range}`;
+
+const readActivityCache = (key: string): { events: RecentActivityEvent[]; hasMore: boolean } | null => {
+    try {
+        const value = localStorage.getItem(key);
+        return value ? JSON.parse(value) : null;
+    } catch {
+        return null;
+    }
+};
+
+const writeActivityCache = (key: string, value: { events: RecentActivityEvent[]; hasMore: boolean }) => {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+        // Keep the feed usable when browser storage is unavailable or full.
+    }
+};
+
 const RANGE_TO_HOURS: Record<RangeFilter, number> = {
     '24h': 24,
     '7d': 24 * 7,
@@ -103,12 +123,20 @@ const RecentActivityFeed: React.FC = () => {
     // Initial load + refetch whenever any filter changes
     useEffect(() => {
         let cancelled = false;
-        setIsLoading(true);
+        const currentFilters = { filter, device, source, range };
+        const key = activityCacheKey(currentFilters);
+        const cached = readActivityCache(key);
+        if (cached) {
+            setEvents(cached.events);
+            setHasMore(cached.hasMore);
+        }
+        setIsLoading(!cached);
         fetchEvents({ filter, device, source, range }, 0)
             .then((data) => {
                 if (cancelled) return;
                 setEvents(data.events);
                 setHasMore(data.hasMore);
+                writeActivityCache(key, { events: data.events, hasMore: data.hasMore });
             })
             .catch((error) => console.error("Error fetching recent activity:", error))
             .finally(() => {
@@ -125,6 +153,7 @@ const RecentActivityFeed: React.FC = () => {
                 .then((data) => {
                     setEvents(data.events);
                     setHasMore(data.hasMore);
+                    writeActivityCache(activityCacheKey(filtersRef.current), { events: data.events, hasMore: data.hasMore });
                 })
                 .catch((error) => console.error("Error polling recent activity:", error));
         }, 30000);
@@ -135,8 +164,10 @@ const RecentActivityFeed: React.FC = () => {
         setIsLoadingMore(true);
         try {
             const data = await fetchEvents({ filter, device, source, range }, events.length);
-            setEvents((prev) => [...prev, ...data.events]);
+            const nextEvents = [...events, ...data.events];
+            setEvents(nextEvents);
             setHasMore(data.hasMore);
+            writeActivityCache(activityCacheKey({ filter, device, source, range }), { events: nextEvents, hasMore: data.hasMore });
         } catch (error) {
             console.error("Error loading more activity:", error);
         } finally {

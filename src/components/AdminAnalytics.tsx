@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 import RecentActivityFeed from './RecentActivityFeed';
 import { getAnalyticsSummary, getDetailedAnalytics, getVisitorAnalytics, getPartySales, getPartyFunnel } from '../services/api';
@@ -71,6 +71,23 @@ const calculateCTR = (views: number, clicks: number) => {
   return (clicks / views) * 100;
 };
 
+const readAnalyticsCache = <T,>(key: string): T | null => {
+  try {
+    const value = localStorage.getItem(`parties247:analytics:${key}`);
+    return value ? JSON.parse(value) as T : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeAnalyticsCache = (key: string, value: unknown) => {
+  try {
+    localStorage.setItem(`parties247:analytics:${key}`, JSON.stringify(value));
+  } catch {
+    // Keep analytics usable when storage is unavailable or full.
+  }
+};
+
 // --- CSV export ---
 const csvEscape = (value: unknown): string => {
   const str = value === null || value === undefined ? '' : String(value);
@@ -122,6 +139,30 @@ type MergedPartyRow = {
 type PartySortKey =
   | 'name' | 'date' | 'views' | 'redirects' | 'realGoOutViews'
   | 'purchases' | 'revenue' | 'realGoOutRevenue' | 'totalTicketsSold';
+
+const indexSalesByParty = (rows: PartySalesRecord[]): Record<string, PartySalesRecord> => {
+  const byPartyId: Record<string, PartySalesRecord> = {};
+  const seenEvent = new Set<string>();
+  for (const row of rows) {
+    if (!row.partyId) continue;
+    if (row.goOutEventId) {
+      if (seenEvent.has(row.goOutEventId)) {
+        const existing = Object.values(byPartyId).find(r => r.goOutEventId === row.goOutEventId);
+        if (existing && row.totalTicketsSold > existing.totalTicketsSold) {
+          delete byPartyId[existing.partyId as string];
+          byPartyId[row.partyId] = row;
+        }
+        continue;
+      }
+      seenEvent.add(row.goOutEventId);
+    }
+    const existing = byPartyId[row.partyId];
+    if (!existing || row.totalTicketsSold > existing.totalTicketsSold) {
+      byPartyId[row.partyId] = row;
+    }
+  }
+  return byPartyId;
+};
 
 const sortMergedPartyRows = (rows: MergedPartyRow[], key: PartySortKey, dir: 'asc' | 'desc'): MergedPartyRow[] => {
   const factor = dir === 'asc' ? 1 : -1;
@@ -427,6 +468,45 @@ const AdminAnalytics: React.FC = () => {
   const [partyAccountFilter, setPartyAccountFilter] = useState<'all' | 'account1' | 'account2'>('all');
   const [partySortKey, setPartySortKey] = useState<PartySortKey>('views');
   const [partySortDir, setPartySortDir] = useState<'asc' | 'desc'>('desc');
+  const chartSectionRef = useRef<HTMLDivElement>(null);
+  const activitySectionRef = useRef<HTMLDivElement>(null);
+  const [chartNearViewport, setChartNearViewport] = useState(false);
+  const [activityNearViewport, setActivityNearViewport] = useState(false);
+
+  useEffect(() => {
+    const cachedSummary = readAnalyticsCache<AnalyticsSummary>('summary');
+    const cachedSales = readAnalyticsCache<PartySalesRecord[]>('sales');
+    const cachedFunnel = readAnalyticsCache<FunnelResponse>(`funnel:${realMonthFilter}`);
+    const cachedChart = readAnalyticsCache<DetailedAnalyticsResponse>('chart:daily');
+    if (cachedSummary) setSummary(cachedSummary);
+    if (cachedSales) {
+      setSalesRows(cachedSales);
+      setSalesByPartyId(indexSalesByParty(cachedSales));
+    }
+    if (cachedFunnel) setFunnel(cachedFunnel);
+    if (cachedChart) setDetailedData(cachedChart);
+  }, []);
+
+  useEffect(() => {
+    const observe = (node: HTMLDivElement | null, reveal: () => void) => {
+      if (!node) return () => {};
+      if (!('IntersectionObserver' in window)) {
+        reveal();
+        return () => {};
+      }
+      const observer = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          reveal();
+          observer.disconnect();
+        }
+      }, { rootMargin: '350px 0px' });
+      observer.observe(node);
+      return () => observer.disconnect();
+    };
+    const stopChart = observe(chartSectionRef.current, () => setChartNearViewport(true));
+    const stopActivity = observe(activitySectionRef.current, () => setActivityNearViewport(true));
+    return () => { stopChart(); stopActivity(); };
+  }, [summary]);
 
   const fetchSummary = async () => {
     setIsLoading(true);
@@ -434,21 +514,26 @@ const AdminAnalytics: React.FC = () => {
     try {
       const data = await getAnalyticsSummary();
       setSummary(data);
+      writeAnalyticsCache('summary', data);
     } catch (err) {
       console.error('Failed to load analytics summary', err);
-      setError('שגיאה בטעינת נתונים');
+      if (!summary && !readAnalyticsCache<AnalyticsSummary>('summary')) setError('שגיאה בטעינת נתונים');
     } finally {
       setIsLoading(false);
     }
   };
 
   const fetchDetailedAnalytics = async () => {
-    setIsLoadingChart(true);
+    const cached = readAnalyticsCache<DetailedAnalyticsResponse>(`chart:${timeFilter}`);
+    if (cached) setDetailedData(cached);
+    else setDetailedData(null);
+    setIsLoadingChart(!cached);
     try {
       const range = timeFilter === 'daily' ? '7d' : '24h';
       const interval = 'hour';
       const data = await getDetailedAnalytics(range, interval);
       setDetailedData(data);
+      writeAnalyticsCache(`chart:${timeFilter}`, data);
     } catch (err) {
       console.error('Failed to load detailed analytics', err);
     } finally {
@@ -471,30 +556,9 @@ const AdminAnalytics: React.FC = () => {
   const fetchPartySales = async () => {
     try {
       const rows = await getPartySales();
-      const byPartyId: Record<string, PartySalesRecord> = {};
-      const seenEvent = new Set<string>();
-      for (const row of rows) {
-        if (!row.partyId) continue;
-        // Unique-by-goOutEventId: dual account1+account2 rows for the same
-        // event must not both land in headlines/ticket totals.
-        if (row.goOutEventId) {
-          if (seenEvent.has(row.goOutEventId)) {
-            const existing = Object.values(byPartyId).find(r => r.goOutEventId === row.goOutEventId);
-            if (existing && row.totalTicketsSold > existing.totalTicketsSold) {
-              delete byPartyId[existing.partyId as string];
-              byPartyId[row.partyId] = row;
-            }
-            continue;
-          }
-          seenEvent.add(row.goOutEventId);
-        }
-        const existing = byPartyId[row.partyId];
-        if (!existing || row.totalTicketsSold > existing.totalTicketsSold) {
-          byPartyId[row.partyId] = row;
-        }
-      }
-      setSalesByPartyId(byPartyId);
+      setSalesByPartyId(indexSalesByParty(rows));
       setSalesRows(rows);
+      writeAnalyticsCache('sales', rows);
     } catch (err) {
       // Non-fatal — the rest of the dashboard still works without real sales data.
       console.error('Failed to load party sales', err);
@@ -502,10 +566,13 @@ const AdminAnalytics: React.FC = () => {
   };
 
   const fetchFunnel = async (days: number, realMonth: string) => {
-    setIsLoadingFunnel(true);
+    const cached = readAnalyticsCache<FunnelResponse>(`funnel:${realMonth}`);
+    setFunnel(cached);
+    setIsLoadingFunnel(!cached);
     try {
       const data = await getPartyFunnel(days, realMonth);
       setFunnel(data);
+      writeAnalyticsCache(`funnel:${realMonth}`, data);
     } catch (err) {
       console.error('Failed to load funnel analytics', err);
     } finally {
@@ -523,8 +590,8 @@ const AdminAnalytics: React.FC = () => {
   }, [realMonthFilter]);
 
   useEffect(() => {
-    fetchDetailedAnalytics().catch(() => { });
-  }, [timeFilter]);
+    if (chartNearViewport) fetchDetailedAnalytics().catch(() => { });
+  }, [timeFilter, chartNearViewport]);
 
   useEffect(() => {
     if (activeTab === 'visitors') {
@@ -635,6 +702,11 @@ const AdminAnalytics: React.FC = () => {
       redirectToPurchaseRate: redirects ? (purchases / redirects) * 100 : null,
     };
   }, [mergedPartyRows]);
+
+  const topSellingRows = useMemo(() => [...mergedPartyRows]
+    .filter(row => row.purchases > 0 || row.revenue > 0 || (row.realGoOutRevenue ?? 0) > 0)
+    .sort((a, b) => b.purchases - a.purchases || b.revenue - a.revenue)
+    .slice(0, 10), [mergedPartyRows]);
 
   useEffect(() => {
     setPartyTablePage(0);
@@ -752,34 +824,97 @@ const AdminAnalytics: React.FC = () => {
           {/* KPI Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard
-              title="חשיפות למותג"
-              value={formatNumber(stats.totalViews)}
-              subtext={`${summary.uniqueVisitors24h} מבקרים ייחודיים ב-24 שעות`}
-              icon={MegaphoneIcon}
-              colorClass="bg-blue-500"
+              title="כרטיסים שנמכרו"
+              value={funnel ? formatNumber(monthScopedTotals.purchases) : '…'}
+              subtext="מכירות מאושרות בטווח שנבחר"
+              icon={TicketIcon}
+              colorClass="bg-yellow-400"
             />
             <KpiCard
-              title="קליקים לרכישה"
-              value={formatNumber(stats.totalClicks)}
-              subtext={`יחס המרה ממוצע: ${stats.avgCTR.toFixed(1)}%`}
-              icon={TicketIcon}
+              title="עמלה שלנו"
+              value={funnel ? `₪${formatNumber(monthScopedTotals.revenue)}` : '…'}
+              subtext="הכנסה מחושבת בטווח שנבחר"
+              icon={MegaphoneIcon}
               colorClass="bg-jungle-lime"
             />
             <KpiCard
-              title="האירוע החם"
-              value={stats.topParty ? stats.topParty.name.substring(0, 15) + (stats.topParty.name.length > 15 ? '...' : '') : '-'}
-              subtext={stats.topParty ? `${stats.topParty.views} צפיות` : ''}
-              icon={FireIcon}
-              colorClass="bg-orange-500"
+              title="מחזור מכירות ב־GoOut"
+              value={funnel ? `₪${formatNumber(monthScopedTotals.realGoOutRevenue)}` : '…'}
+              subtext="נתון מצטבר לאירועים בחודש הנבחר"
+              icon={TicketIcon}
+              colorClass="bg-blue-500"
             />
             <KpiCard
-              title="מלך ההמרות"
-              value={stats.bestConverting ? stats.bestConverting.name.substring(0, 15) : '-'}
-              subtext={stats.bestConverting ? `${calculateCTR(stats.bestConverting.views, stats.bestConverting.redirects).toFixed(1)}% המרה` : ''}
-              icon={TicketIcon}
+              title="קליקים ל־GoOut"
+              value={funnel ? formatNumber(monthScopedTotals.redirects) : '…'}
+              subtext="קליק אינו מכירה מאושרת"
+              icon={FireIcon}
               colorClass="bg-purple-500"
             />
           </div>
+
+          <section className="bg-jungle-surface border border-wood-brown rounded-2xl shadow-lg p-5 sm:p-6" aria-labelledby="sales-by-party-title">
+            <div className="mb-4">
+              <div>
+                <h3 id="sales-by-party-title" className="text-xl text-jungle-text font-bold">מכירות לפי מסיבה</h3>
+                <p className="text-xs text-jungle-text/55 mt-1">
+                  המסיבות לפי חודש האירוע; כרטיסים ועמלה לפי טווח הפעילות, ומחזור GoOut הוא נתון מצטבר
+                </p>
+                <div aria-label="סינון לפי חודש אירוע" className="flex max-w-full overflow-x-auto bg-jungle-deep rounded-lg p-1 border border-wood-brown gap-1 mt-4">
+                  <button
+                    onClick={() => setRealMonthFilter('all')}
+                    aria-pressed={realMonthFilter === 'all'}
+                    className={`px-3 py-1.5 text-xs rounded-md whitespace-nowrap transition-all ${realMonthFilter === 'all' ? 'bg-jungle-accent text-white font-medium' : 'text-jungle-text/60 hover:text-jungle-text'}`}
+                  >
+                    כל הזמן
+                  </button>
+                  {monthChipOptions.map(month => (
+                    <button
+                      key={month}
+                      onClick={() => setRealMonthFilter(month)}
+                      aria-pressed={realMonthFilter === month}
+                      className={`px-3 py-1.5 text-xs rounded-md whitespace-nowrap transition-all ${realMonthFilter === month ? 'bg-jungle-accent text-white font-medium' : 'text-jungle-text/60 hover:text-jungle-text'}`}
+                    >
+                      {formatMonthLabel(month)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {!funnel && isLoadingFunnel ? (
+              <div className="py-8 flex justify-center"><LoadingSpinner /></div>
+            ) : topSellingRows.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[620px] text-sm">
+                  <thead>
+                    <tr className="text-right text-xs text-jungle-text/50 border-b border-wood-brown/60">
+                      <th className="py-2 px-3 font-medium">מסיבה</th>
+                      <th className="py-2 px-3 font-medium">כרטיסים</th>
+                      <th className="py-2 px-3 font-medium">קליקים ל־GoOut</th>
+                      <th className="py-2 px-3 font-medium">עמלה שלנו</th>
+                      <th className="py-2 px-3 font-medium">מחזור GoOut</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topSellingRows.map(row => (
+                      <tr key={row.partyId} className="border-b border-wood-brown/30 last:border-0 hover:bg-white/[0.025]">
+                        <td className="py-3 px-3 text-jungle-text font-medium max-w-[280px] truncate">{row.name || 'מסיבה ללא שם'}</td>
+                        <td className="py-3 px-3 text-yellow-300 font-semibold tabular-nums">{formatNumber(row.purchases)}</td>
+                        <td className="py-3 px-3 text-jungle-lime tabular-nums">{formatNumber(row.redirects)}</td>
+                        <td className="py-3 px-3 text-jungle-lime tabular-nums">₪{formatNumber(row.revenue)}</td>
+                        <td className="py-3 px-3 text-blue-300 tabular-nums">{row.realGoOutRevenue == null ? '—' : `₪${formatNumber(row.realGoOutRevenue)}`}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="py-6 text-center text-sm text-jungle-text/50">
+                {funnel ? 'אין כרגע מכירות מאושרות למסיבות בחודש שנבחר.' : 'טוען נתוני מכירות…'}
+              </p>
+            )}
+          </section>
 
           {/* Site-wide conversion funnel: views -> clicks to GoOut -> confirmed GoOut purchases */}
           <div className="bg-jungle-surface border border-wood-brown rounded-2xl shadow-lg p-6">
@@ -787,29 +922,6 @@ const AdminAnalytics: React.FC = () => {
               <h3 className="text-lg text-jungle-text font-bold flex items-center gap-2">
                 🔻 משפך המרות - כלל האתר
               </h3>
-              <div className="flex flex-wrap bg-jungle-deep rounded-lg p-1 border border-wood-brown gap-1 self-start">
-                <button
-                  onClick={() => setRealMonthFilter('all')}
-                  className={`px-3 py-1 text-xs rounded-md transition-all ${realMonthFilter === 'all'
-                    ? 'bg-jungle-accent text-white font-medium shadow-sm'
-                    : 'text-jungle-text/60 hover:text-jungle-text'
-                    }`}
-                >
-                  כל הזמן
-                </button>
-                {monthChipOptions.map(m => (
-                  <button
-                    key={m}
-                    onClick={() => setRealMonthFilter(m)}
-                    className={`px-3 py-1 text-xs rounded-md transition-all whitespace-nowrap ${realMonthFilter === m
-                      ? 'bg-jungle-accent text-white font-medium shadow-sm'
-                      : 'text-jungle-text/60 hover:text-jungle-text'
-                      }`}
-                  >
-                    {formatMonthLabel(m)}
-                  </button>
-                ))}
-              </div>
             </div>
             {isLoadingFunnel || !funnel ? (
               <div className="p-6 flex justify-center"><LoadingSpinner /></div>
@@ -886,7 +998,7 @@ const AdminAnalytics: React.FC = () => {
           </div>
 
           {/* Time-Based Analytics */}
-          <div className="bg-jungle-surface border border-wood-brown rounded-2xl shadow-lg p-6">
+          <div ref={chartSectionRef} className="bg-jungle-surface border border-wood-brown rounded-2xl shadow-lg p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl text-jungle-text font-bold flex items-center gap-2">
                 📊 מגמות
@@ -909,7 +1021,9 @@ const AdminAnalytics: React.FC = () => {
               </div>
             </div>
 
-            {isLoadingChart ? (
+            {!chartNearViewport && chartData.length === 0 ? (
+              <div className="h-64 flex items-center justify-center text-jungle-text/45 text-sm">הגרף ייטען כשתגלול לכאן</div>
+            ) : isLoadingChart && chartData.length === 0 ? (
               <div className="h-64 flex items-center justify-center">
                 <LoadingSpinner />
               </div>
@@ -1017,8 +1131,12 @@ const AdminAnalytics: React.FC = () => {
 
           {/* Recent Activity + Quick Insights */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
-              <RecentActivityFeed />
+            <div ref={activitySectionRef} className="lg:col-span-2 min-h-[220px]">
+              {activityNearViewport ? <RecentActivityFeed /> : (
+                <div className="bg-jungle-surface border border-wood-brown rounded-2xl p-6 min-h-[220px] flex items-center justify-center text-sm text-jungle-text/45">
+                  הפעילות האחרונה תיטען כשתגלול לכאן
+                </div>
+              )}
             </div>
             <div className="bg-jungle-surface border border-wood-brown rounded-2xl shadow-lg p-6">
               <h3 className="text-xl text-jungle-text font-bold mb-6">טעוני שיפור ⚠️</h3>
