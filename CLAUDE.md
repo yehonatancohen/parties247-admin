@@ -42,4 +42,5 @@ totals — both had bugs fixed in 2026-08) after extracting them into `src/lib/`
   `PartySalesRecord` / `FunnelResponse`) in sync with the backend response, not the website.
 - Revenue figures here are **our commission** (account1 ₪25/ticket, account2 6%); the
   `real*` columns are GoOut's numbers. Don't mix them in a tile.
-- Dark theme, `font-display` jungle styling shared with the website — keep it consistent.
+- Look: 2026-10-02 redesign, "running order" world (ink-indigo ground, three data inks: yellow=sales/commission, orange=clicks, periwinkle=views; Rubik). Tokens live in `tailwind.config.cjs` (legacy `jungle-*` names remapped). The old jungle styling is intentionally gone; do not restore it. Analytics UI is in `src/components/analytics/`, aggregation helpers in `src/lib/analytics.ts`.
+- Hero numbers use the funnel's windowed `purchases`/`revenue` (real confirmed sales, rolling 24h/7d/30d). Time-series `purchases` are only GoOut clicks.

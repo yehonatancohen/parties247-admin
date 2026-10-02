@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import "../styles/tailwind.css";
-import { Assistant } from "next/font/google";
+import { Rubik } from "next/font/google";
 import Providers from "./providers";
 
-const assistant = Assistant({
+const rubik = Rubik({
   subsets: ["latin", "hebrew"],
-  weight: ["400", "600", "700"],
+  weight: ["400", "500", "700", "800"],
   display: "swap",
-  variable: "--font-assistant",
+  variable: "--font-rubik",
 });
 
 export const metadata: Metadata = {
@@ -22,7 +22,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="he" dir="rtl" className={assistant.variable}>
+    <html lang="he" dir="rtl" className={rubik.variable}>
       <body><Providers>{children}</Providers></body>
     </html>
   );

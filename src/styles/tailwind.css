@@ -3,11 +3,17 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
+
   body {
     direction: rtl;
     color: theme('colors.jungle-text');
     background-color: theme('colors.jungle-deep');
     font-family: theme('fontFamily.sans');
+    font-variant-numeric: tabular-nums;
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* Prevent iOS Safari from auto-zooming the page when a form field is
@@ -25,5 +31,40 @@
 
   .font-sans {
     font-family: theme('fontFamily.sans');
+  }
+
+  ::selection {
+    background: theme('colors.ink-sales');
+    color: theme('colors.jungle-deep');
+  }
+
+  :focus-visible {
+    outline: 2px solid theme('colors.ink-sales');
+    outline-offset: 2px;
+  }
+
+  input,
+  textarea {
+    caret-color: theme('colors.ink-sales');
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.wood-brown') transparent;
+  }
+}
+
+@layer components {
+  /* The one authored motion: blocks rise from the baseline once on load. */
+  @keyframes block-rise {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+  }
+  .block-rise {
+    transform-origin: bottom;
+    animation: block-rise 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .block-rise { animation: none; }
   }
 }

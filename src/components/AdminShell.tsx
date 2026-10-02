@@ -8,18 +8,18 @@ import * as api from '@/services/api';
 const JWT_TOKEN_STORAGE = 'jwtAuthToken';
 
 const navItems = [
-  { href: '/', end: true, label: 'ניהול קטלוג' },
   { href: '/analytics', end: false, label: 'אנליטיקס' },
   { href: '/attribution', end: false, label: 'מקורות רכישה' },
+  { href: '/', end: true, label: 'ניהול קטלוג' },
   { href: '/whatsapp', end: false, label: 'וואטסאפ' },
   { href: '/audit-log', end: false, label: 'יומן פעולות' },
 ];
 
 const getNavLinkClass = (isActive: boolean) =>
-  `shrink-0 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+  `shrink-0 px-4 h-12 inline-flex items-center text-[15px] font-medium border-b-2 transition-colors ${
     isActive
-      ? 'bg-jungle-accent text-white'
-      : 'text-jungle-text/70 hover:text-jungle-text hover:bg-white/5'
+      ? 'border-ink-sales text-white'
+      : 'border-transparent text-ink-dim hover:text-white'
   }`;
 
 const AdminShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -53,26 +53,26 @@ const AdminShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 bg-jungle-surface border-b border-wood-brown">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 gap-4">
-            <span className="font-display text-lg font-bold text-jungle-text shrink-0">Parties 24/7 · Admin</span>
-            <nav className="flex items-center gap-1 overflow-x-auto">
-              {navItems.map((item) => (
-                <NavLink
-                  key={item.href}
-                  href={item.href}
-                  end={item.end}
-                  className={({ isActive }) => getNavLinkClass(isActive)}
-                >
-                  {item.label}
-                </NavLink>
-              ))}
-            </nav>
+      <header className="sticky top-0 z-40 bg-jungle-deep border-b border-wood-brown">
+        <div className="w-full px-4 sm:px-6 lg:px-8 max-w-[1440px] mx-auto">
+          <div className="flex items-center h-11">
+            <span className="text-[13px] font-bold tracking-wide text-ink-dim">PARTIES 24/7 · ADMIN</span>
           </div>
+          <nav className="-mx-4 px-4 sm:mx-0 sm:px-0 flex items-stretch overflow-x-auto" aria-label="ניווט ראשי">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                end={item.end}
+                className={({ isActive }) => getNavLinkClass(isActive)}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
         </div>
       </header>
-      <main className="w-full px-4 sm:px-6 lg:px-8 py-6">{children}</main>
+      <main className="w-full px-4 sm:px-6 lg:px-8 py-5 max-w-[1440px] mx-auto">{children}</main>
     </div>
   );
 };

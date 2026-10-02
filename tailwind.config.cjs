@@ -12,23 +12,38 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Historically a jungle/green theme; remapped to a neutral, dark
-        // "professional dashboard" palette (slate, not green). Class names
-        // (jungle-*, wood-brown) are kept as-is across components so this
-        // file is the single place that controls the admin's look.
-        'jungle-deep': '#0f172a',    // page background (slate-900)
-        'jungle-surface': '#1e293b', // card/panel background (slate-800)
-        'jungle-accent': '#3b82f6',  // primary accent (blue-500)
-        'jungle-lime': '#38bdf8',    // secondary accent / highlights (sky-400)
-        'jungle-text': '#cbd5e1',    // body text (slate-300)
-        'wood-brown': '#334155',     // subtle borders (slate-700)
+        // "Running order" world: ink-indigo ground, hairline grid rules, and
+        // exactly three data inks. Legacy class names (jungle-*, wood-brown)
+        // stay mapped here so pages not yet rewritten inherit the new look
+        // without class edits; this file is the single place that controls it.
+        'jungle-deep': '#0E1330',    // page ground
+        'jungle-surface': '#161C45', // raised panel
+        'jungle-accent': '#4F5FF5',  // primary action (white text passes AA)
+        'jungle-lime': '#FFD23F',    // sun-yellow: sales / highlight
+        'jungle-text': '#E3E6FF',    // body text on ink
+        'wood-brown': '#2A3270',     // hairline rules
+        // data inks (one meaning each, everywhere)
+        'ink-sales': '#FFD23F',      // confirmed sales + commission
+        'ink-click': '#FF6A3D',      // clicks out to GoOut
+        'ink-view': '#8E9BFF',       // site views / visits
+        'ink-dim': '#A4ABD9',        // secondary text (AA on ground)
+        'ink-cell': '#1E2655',       // empty grid cell
       },
-      fontFamily: {
-        sans: ['var(--font-assistant)', '"Assistant"', 'sans-serif'],
-        display: ['var(--font-assistant)', '"Assistant"', 'sans-serif'],
+      borderRadius: {
+        // Square-ish across the admin; legacy rounded-xl/2xl classes shrink with it.
+        md: '3px',
+        lg: '4px',
+        xl: '5px',
+        '2xl': '6px',
       },
       boxShadow: {
-        'jungle-glow': '0 0 0 1px rgba(59, 130, 246, 0.15)',
+        lg: 'none',
+        xl: 'none',
+        'jungle-glow': 'none',
+      },
+      fontFamily: {
+        sans: ['var(--font-rubik)', '"Rubik"', 'sans-serif'],
+        display: ['var(--font-rubik)', '"Rubik"', 'sans-serif'],
       },
     },
   },
