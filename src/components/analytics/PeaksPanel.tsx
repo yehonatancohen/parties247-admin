@@ -128,9 +128,9 @@ const PeaksPanel: React.FC<{ data: DetailedAnalyticsResponse | null; loading: bo
                         onClick={() => setPicked(c)}
                         className="h-[22px] sm:h-[26px]"
                         style={{
-                          background: lv === 0 ? '#1E2655' : hex,
+                          background: lv === 0 ? '#232A52' : hex,
                           opacity: lv === 0 ? 1 : LEVELS[lv],
-                          outline: top ? '2px solid #E3E6FF' : picked?.key === c.key ? '2px solid #FFD23F' : 'none',
+                          outline: top ? '2px solid #E0E3F5' : picked?.key === c.key ? '2px solid #E9C46A' : 'none',
                           outlineOffset: '-2px',
                         }}
                       />

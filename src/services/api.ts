@@ -508,10 +508,13 @@ export const getAnalyticsSummary = async (): Promise<AnalyticsSummary> => {
 export const getDetailedAnalytics = async (
   range: '7d' | '24h' | '30d' = '7d',
   interval: 'day' | 'hour' = 'day',
-  partyId?: string
+  partyId?: string,
+  custom?: { start: string; end: string }
 ): Promise<DetailedAnalyticsResponse> => {
   const params = new URLSearchParams({ range, interval });
   if (partyId) params.append('partyId', partyId);
+  // Custom window (ISO strings): the backend ignores `range` when both are present.
+  if (custom) { params.append('start', custom.start); params.append('end', custom.end); }
 
   const response = await fetch(`${API_URL}/admin/analytics/detailed?${params.toString()}`, {
     headers: { ...getAuthHeader() },

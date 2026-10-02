@@ -3,8 +3,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { getPartyFunnel, getPartySales } from '../../services/api';
 import { FunnelResponse, PartySalesRecord } from '../../data/types';
 import {
-  MergedPartyRow, PartySortKey, daysCoveringMonth, eventMonth, exportPartiesToCsv, formatMonthLabel,
-  formatNumber, indexSalesByParty, jerusalemYyyyMm, readAnalyticsCache, sortMergedPartyRows, writeAnalyticsCache,
+  MergedPartyRow, PartySortKey, daysCoveringMonth, exportPartiesToCsv, formatMonthLabel,
+  formatNumber, indexSalesByParty, mergePartyRows, monthTotals, jerusalemYyyyMm, readAnalyticsCache, sortMergedPartyRows, writeAnalyticsCache,
 } from '../../lib/analytics';
 import { GhostButton, InkKey, Panel, Segmented, Skeleton } from './ui';
 
@@ -69,41 +69,7 @@ const PartiesTab: React.FC = () => {
 
   const salesByPartyId = useMemo(() => indexSalesByParty(salesRows), [salesRows]);
 
-  // One row per party: click metrics and new sale deltas are windowed by the
-  // funnel range; lifetime tickets/commission and GoOut gross are cumulative
-  // for events in the selected month (event date, Asia/Jerusalem).
-  const rows: MergedPartyRow[] = useMemo(() => {
-    if (!funnel) return [];
-    const now = Date.now();
-    return funnel.byParty
-      .filter(row => {
-        if (month !== 'all' && eventMonth(row.date) !== month) return false;
-        return row.views > 0 || row.redirects > 0 || row.purchases > 0
-          || row.realGoOutViews != null || row.realGoOutRevenue != null;
-      })
-      .map(row => {
-        const sales = salesByPartyId[row.partyId];
-        const accountIds = row.accountIds.length > 0 ? row.accountIds : (sales?.accountId ? [sales.accountId] : []);
-        return {
-          partyId: row.partyId,
-          accountIds,
-          name: row.name,
-          slug: row.slug,
-          date: row.date,
-          isActive: row.date ? new Date(row.date).getTime() >= now : false,
-          views: row.views,
-          redirects: row.redirects,
-          viewToRedirectRate: row.viewToRedirectRate,
-          realGoOutViews: row.realGoOutViews,
-          purchases: row.purchases,
-          redirectToPurchaseRate: row.redirectToPurchaseRate,
-          revenue: row.revenue,
-          lifetimeCommission: sales?.totalRevenue ?? null,
-          realGoOutRevenue: row.realGoOutRevenue,
-          totalTicketsSold: sales?.totalTicketsSold ?? null,
-        };
-      });
-  }, [funnel, salesByPartyId, month]);
+  const rows: MergedPartyRow[] = useMemo(() => mergePartyRows(funnel, salesByPartyId, month), [funnel, salesByPartyId, month]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -125,14 +91,7 @@ const PartiesTab: React.FC = () => {
     return Array.from(set).sort().reverse();
   }, [funnel]);
 
-  // Ticket sales and earned commission come from the lifetime sales snapshot for
-  // events in the chosen month, matching GoOut's cumulative revenue counter.
-  const totals = useMemo(() => ({
-    tickets: rows.reduce((s, r) => s + (r.totalTicketsSold ?? r.purchases), 0),
-    commission: rows.reduce((s, r) => s + (r.lifetimeCommission ?? r.revenue), 0),
-    gross: rows.reduce((s, r) => s + (r.realGoOutRevenue ?? 0), 0),
-    clicks: rows.reduce((s, r) => s + r.redirects, 0),
-  }), [rows]);
+  const totals = useMemo(() => monthTotals(rows), [rows]);
 
   // GoOut sales that couldn't be matched to a catalog party: matched ones are
   // covered by the per-party table above.

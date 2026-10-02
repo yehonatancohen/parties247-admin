@@ -17,9 +17,9 @@ export const INK_TEXT: Record<Ink, string> = {
 
 // Hex twins of the tailwind ink tokens, for places that need inline colour (SVG, mixes).
 export const INK_HEX: Record<Ink, string> = {
-  sales: '#FFD23F',
-  click: '#FF6A3D',
-  view: '#8E9BFF',
+  sales: '#E9C46A',
+  click: '#E9967A',
+  view: '#9AA7E8',
 };
 
 export const InkKey: React.FC<{ ink: Ink }> = ({ ink }) => (
@@ -41,7 +41,7 @@ export function Segmented<T extends string>({
   className?: string;
   size?: 'sm' | 'md';
 }) {
-  const active = tone === 'ink' ? 'bg-ink-sales text-jungle-deep' : 'bg-jungle-text text-jungle-deep';
+  const active = tone === 'ink' ? 'bg-jungle-accent text-white' : 'bg-jungle-text text-jungle-deep';
   const h = size === 'md' ? 'h-12 text-[15px]' : 'h-10 text-sm';
   return (
     <div role="group" aria-label={label} className={`grid border border-wood-brown ${className}`} style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>

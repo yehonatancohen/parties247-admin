@@ -16,18 +16,18 @@ module.exports = {
         // exactly three data inks. Legacy class names (jungle-*, wood-brown)
         // stay mapped here so pages not yet rewritten inherit the new look
         // without class edits; this file is the single place that controls it.
-        'jungle-deep': '#0E1330',    // page ground
-        'jungle-surface': '#161C45', // raised panel
-        'jungle-accent': '#4F5FF5',  // primary action (white text passes AA)
-        'jungle-lime': '#FFD23F',    // sun-yellow: sales / highlight
-        'jungle-text': '#E3E6FF',    // body text on ink
-        'wood-brown': '#2A3270',     // hairline rules
+        'jungle-deep': '#11162E',    // page ground
+        'jungle-surface': '#1A2040', // raised panel
+        'jungle-accent': '#5565D8',  // primary action (white text passes AA)
+        'jungle-lime': '#E9C46A',    // sun-yellow: sales / highlight
+        'jungle-text': '#E0E3F5',    // body text on ink
+        'wood-brown': '#2B3260',     // hairline rules
         // data inks (one meaning each, everywhere)
-        'ink-sales': '#FFD23F',      // confirmed sales + commission
-        'ink-click': '#FF6A3D',      // clicks out to GoOut
-        'ink-view': '#8E9BFF',       // site views / visits
+        'ink-sales': '#E9C46A',      // confirmed sales + commission
+        'ink-click': '#E9967A',      // clicks out to GoOut
+        'ink-view': '#9AA7E8',       // site views / visits
         'ink-dim': '#A4ABD9',        // secondary text (AA on ground)
-        'ink-cell': '#1E2655',       // empty grid cell
+        'ink-cell': '#232A52',       // empty grid cell
       },
       borderRadius: {
         // Square-ish across the admin; legacy rounded-xl/2xl classes shrink with it.

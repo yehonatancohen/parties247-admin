@@ -1,4 +1,4 @@
-import { PartySalesRecord, VisitorRecord } from '../data/types';
+import { FunnelResponse, PartySalesRecord, VisitorRecord } from '../data/types';
 
 // --- Helpers ---
 export const formatNumber = (num: number) => new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(num);
@@ -302,3 +302,88 @@ export const relativeTimeHe = (iso: string, nowMs = Date.now()): string => {
   const d = Math.round(hr / 24);
   return `לפני ${d} ימים`;
 };
+
+
+// --- Month view: one merged row per party, plus the totals the hero shows ---
+// Moved verbatim from the parties tab so the overview and the table can never
+// disagree. Click metrics and new sale deltas are windowed by the funnel range;
+// lifetime tickets/commission and GoOut gross are cumulative for events whose
+// own date falls in `month` (Asia/Jerusalem).
+export const mergePartyRows = (
+  funnel: FunnelResponse | null,
+  salesByPartyId: Record<string, PartySalesRecord>,
+  month: string,
+): MergedPartyRow[] => {
+  if (!funnel) return [];
+  const now = Date.now();
+  return funnel.byParty
+    .filter(row => {
+      if (month !== 'all' && eventMonth(row.date) !== month) return false;
+      return row.views > 0 || row.redirects > 0 || row.purchases > 0
+        || row.realGoOutViews != null || row.realGoOutRevenue != null;
+    })
+    .map(row => {
+      const sales = salesByPartyId[row.partyId];
+      const accountIds = row.accountIds.length > 0 ? row.accountIds : (sales?.accountId ? [sales.accountId] : []);
+      return {
+        partyId: row.partyId,
+        accountIds,
+        name: row.name,
+        slug: row.slug,
+        date: row.date,
+        isActive: row.date ? new Date(row.date).getTime() >= now : false,
+        views: row.views,
+        redirects: row.redirects,
+        viewToRedirectRate: row.viewToRedirectRate,
+        realGoOutViews: row.realGoOutViews,
+        purchases: row.purchases,
+        redirectToPurchaseRate: row.redirectToPurchaseRate,
+        revenue: row.revenue,
+        lifetimeCommission: sales?.totalRevenue ?? null,
+        realGoOutRevenue: row.realGoOutRevenue,
+        totalTicketsSold: sales?.totalTicketsSold ?? null,
+      };
+    });
+};
+
+export const monthTotals = (rows: MergedPartyRow[]) => ({
+  tickets: rows.reduce((s, r) => s + (r.totalTicketsSold ?? r.purchases), 0),
+  commission: rows.reduce((s, r) => s + (r.lifetimeCommission ?? r.revenue), 0),
+  gross: rows.reduce((s, r) => s + (r.realGoOutRevenue ?? 0), 0),
+  clicks: rows.reduce((s, r) => s + r.redirects, 0),
+  views: rows.reduce((s, r) => s + r.views, 0),
+});
+
+// --- Day grid for the activity chart ---
+// The backend buckets "day" series by UTC date ("2026-10-02").
+export type DayCell = { key: string; views: number; clicks: number };
+
+export const utcDayKey = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+export const buildDayGrid = (
+  points: { timestamp: string; partyViews: number; purchases: number }[],
+  startKey: string | null,
+  endMs = Date.now(),
+): DayCell[] => {
+  const byKey = new Map(points.map(p => [p.timestamp.slice(0, 10), p]));
+  let start = startKey;
+  if (!start) {
+    // "since the beginning": start at the first day that has any activity.
+    const firstActive = [...byKey.keys()].filter(k => {
+      const p = byKey.get(k)!;
+      return p.partyViews > 0 || p.purchases > 0;
+    }).sort()[0];
+    start = firstActive ?? utcDayKey(endMs);
+  }
+  const out: DayCell[] = [];
+  const endKey = utcDayKey(endMs);
+  for (let t = Date.parse(`${start}T00:00:00Z`); utcDayKey(t) <= endKey; t += 86_400_000) {
+    const k = utcDayKey(t);
+    const p = byKey.get(k);
+    out.push({ key: k, views: p?.partyViews ?? 0, clicks: p?.purchases ?? 0 });
+  }
+  return out;
+};
+
+export const HEBREW_MONTHS_SHORT = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'];
+export const monthName = (yyyyMm: string) => HEBREW_MONTHS[parseInt(yyyyMm.split('-')[1], 10) - 1] ?? yyyyMm;
