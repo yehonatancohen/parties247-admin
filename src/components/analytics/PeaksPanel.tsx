@@ -63,11 +63,11 @@ const PeaksPanel: React.FC<{ data: DetailedAnalyticsResponse | null; loading: bo
     return { max24, max7, peak24, top3, hotHours, rows: rows.reverse() };
   }, [grid, last24, metric]);
 
-  const readout = picked ?? stats.peak24;
-  const readoutLabel = picked ? 'נבחר' : 'שיא ב-24 השעות';
+  const readout = picked;
+  const readoutLabel = 'נבחר';
 
   return (
-    <Panel title="איפה הפיקים" note={meta.long}>
+    <Panel title="פיקים בשבוע האחרון" note={meta.long}>
       <Segmented
         options={METRICS.map(m => ({ value: m.value, label: m.label }))}
         value={metric}
@@ -85,7 +85,7 @@ const PeaksPanel: React.FC<{ data: DetailedAnalyticsResponse | null; loading: bo
       ) : (
         <>
           <p className="min-h-[28px] text-[15px] text-jungle-text" aria-live="polite">
-            {readout && valueOf(readout, metric) > 0 ? (
+            {readout ? (
               <>
                 <span className="text-ink-dim">{readoutLabel}: </span>
                 <span className="font-bold text-white">{formatHour(readout.hour)}</span>
@@ -93,41 +93,9 @@ const PeaksPanel: React.FC<{ data: DetailedAnalyticsResponse | null; loading: bo
                 <span className="font-bold" style={{ color: hex }}>{valueOf(readout, metric)}</span>
               </>
             ) : (
-              <span className="text-ink-dim">אין פעילות בטווח הזה</span>
+              <span className="text-ink-dim">גע בתא כדי לראות את השעה והערך שלו</span>
             )}
           </p>
-
-          {/* 24h strip: one block per hour, height is the count */}
-          <div dir="ltr" className="mt-1">
-            <div className="flex items-end gap-[3px] h-[112px] border-b border-wood-brown">
-              {last24.map(c => {
-                const v = valueOf(c, metric);
-                const isPeak = stats.peak24?.key === c.key;
-                const h = stats.max24 > 0 ? Math.max(v > 0 ? 3 : 0, (v / stats.max24) * 100) : 0;
-                return (
-                  <button
-                    key={c.key}
-                    type="button"
-                    aria-label={`${formatHour(c.hour)}: ${v}`}
-                    onClick={() => setPicked(c)}
-                    className="relative flex-1 h-full flex items-end"
-                  >
-                    <span
-                      className="block w-full block-rise"
-                      style={{ height: `${h}%`, background: hex, opacity: isPeak || picked?.key === c.key ? 1 : 0.5 }}
-                    />
-                  </button>
-                );
-              })}
-            </div>
-            <div className="flex gap-[3px] mt-1 text-[11px] text-ink-dim">
-              {last24.map(c => (
-                <span key={c.key} className="flex-1 text-center overflow-visible whitespace-nowrap">
-                  {c.hour % 6 === 0 ? String(c.hour).padStart(2, '0') : ''}
-                </span>
-              ))}
-            </div>
-          </div>
 
           {/* 7-day grid: rows are days, columns are hours; every cell is one real hour */}
           <h4 className="text-[15px] font-bold text-white mt-6 mb-1">7 ימים: יום × שעה</h4>

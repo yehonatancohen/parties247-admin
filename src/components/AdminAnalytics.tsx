@@ -5,6 +5,7 @@ import { getAnalyticsSummary, getDetailedAnalytics, getPartyFunnel, getRecentAct
 import { AnalyticsSummary, DetailedAnalyticsResponse, FunnelResponse, RecentActivityEvent } from '../data/types';
 import { readAnalyticsCache, writeAnalyticsCache } from '../lib/analytics';
 import SalesHero, { Period } from './analytics/SalesHero';
+import Last24Panel from './analytics/Last24Panel';
 import PeaksPanel from './analytics/PeaksPanel';
 import BreakdownBars from './analytics/BreakdownBars';
 import WhatSells from './analytics/WhatSells';
@@ -27,6 +28,7 @@ const AdminAnalytics: React.FC = () => {
   const [detailed, setDetailed] = useState<DetailedAnalyticsResponse | null>(null);
   const [detailedLoading, setDetailedLoading] = useState(false);
   const [lastSale, setLastSale] = useState<RecentActivityEvent | null>(null);
+  const [sales24, setSales24] = useState<RecentActivityEvent[]>([]);
   const [showActivity, setShowActivity] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +72,9 @@ const AdminAnalytics: React.FC = () => {
         .catch(err => console.error('Failed to load peaks', err)),
       getRecentActivity({ types: ['goout_purchase'], limit: 1, hours: 24 * 30 })
         .then(r => setLastSale(r.events[0] ?? null))
+        .catch(() => {}),
+      getRecentActivity({ types: ['goout_purchase'], limit: 200, hours: 24 })
+        .then(r => setSales24(r.events))
         .catch(() => {}),
     ];
     await Promise.all(jobs);
@@ -120,6 +125,7 @@ const AdminAnalytics: React.FC = () => {
             ]}
           />
           <SalesHero period={period} funnel={funnels[period] ?? null} loading={funnelLoading} lastSale={lastSale} />
+          <Last24Panel data={detailed} loading={detailedLoading} sales={sales24} />
           <PeaksPanel data={detailed} loading={detailedLoading} />
           <div className="grid gap-4 md:grid-cols-2 items-start">
             <WhatSells funnel={funnels[period] ?? null} loading={funnelLoading} period={period} />
