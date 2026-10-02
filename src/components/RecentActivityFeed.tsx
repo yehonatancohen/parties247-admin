@@ -89,15 +89,15 @@ const SOURCE_OPTIONS: { value: SourceFilter; label: string }[] = [
     { value: 'referral', label: 'הפניה' },
 ];
 
-const RecentActivityFeed: React.FC = () => {
+const RecentActivityFeed: React.FC<{ initialFilter?: ActivityFilter; initialRange?: RangeFilter }> = ({ initialFilter = 'all', initialRange = '24h' }) => {
     const [events, setEvents] = useState<RecentActivityEvent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(false);
-    const [filter, setFilter] = useState<ActivityFilter>('all');
+    const [filter, setFilter] = useState<ActivityFilter>(initialFilter);
     const [device, setDevice] = useState<DeviceFilter>('all');
     const [source, setSource] = useState<SourceFilter>('all');
-    const [range, setRange] = useState<RangeFilter>('24h');
+    const [range, setRange] = useState<RangeFilter>(initialRange);
 
     const filtersRef = useRef({ filter, device, source, range });
     filtersRef.current = { filter, device, source, range };

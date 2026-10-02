@@ -145,6 +145,7 @@ const AdminAnalytics: React.FC = () => {
 
           <SalesHero month={month} totals={totals} loading={funnelLoading} lastSale={lastSale} />
           <ActivityChart month={month} hourly={hourly} hourlyLoading={hourlyLoading} sales={sales7} />
+          <RecentActivityFeed initialFilter="goout_purchase" initialRange="7d" />
           <div className="grid gap-4 md:grid-cols-2 items-start">
             <WhatSells rows={rows} loading={funnelLoading} />
             {summary && <BreakdownBars title="מאיפה נכנסים" items={summary.trafficSources} limit={4} />}
@@ -154,10 +155,9 @@ const AdminAnalytics: React.FC = () => {
             <>
               <PeaksPanel data={hourly} loading={hourlyLoading} />
               {summary && <BreakdownBars title="באיזה מכשיר" items={summary.devices} />}
-              <RecentActivityFeed />
             </>
           ) : (
-            <GhostButton onClick={() => setShowMore(true)} className="w-full h-12">עוד נתונים: פיקים לפי שעה, מכשירים, פעילות אחרונה</GhostButton>
+            <GhostButton onClick={() => setShowMore(true)} className="w-full h-12">עוד נתונים: פיקים לפי שעה, מכשירים</GhostButton>
           )}
         </>
       )}

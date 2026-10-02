@@ -203,6 +203,8 @@ export interface RecentActivityEvent {
   details?: string;
   device?: string;
   source?: string;
+  tickets?: number;     // goout_purchase only: tickets in this sale
+  commission?: number;  // goout_purchase only: our commission for this sale (₪)
 }
 
 export interface RecentActivityResponse {

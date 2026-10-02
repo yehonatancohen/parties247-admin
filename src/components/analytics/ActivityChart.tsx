@@ -31,6 +31,9 @@ const dayTitle = (key: string, withYear: boolean) => {
   return `יום ${HEBREW_WEEKDAYS_SHORT[weekdayOfDayKey(key)]} · ${d}/${m}${withYear ? `/${y}` : ''}`;
 };
 
+// Tickets in one sale: the backend sends `tickets`; older responses only carry it in the Hebrew `details` text.
+const ticketsOf = (e: RecentActivityEvent) => e.tickets ?? (e.details ? (/\d+/.exec(e.details) ? parseInt(/\d+/.exec(e.details)![0], 10) : 1) : 1);
+
 const Y = ({ label }: { label: string | number }) => (
   <span className="absolute top-0 left-1 text-[11px] text-ink-dim bg-jungle-surface/80 px-1 leading-4 pointer-events-none">{label}</span>
 );
@@ -58,11 +61,10 @@ const ActivityChart: React.FC<{
   // 'month' makes no sense when the chip says "since the beginning".
   const effective: Range = range === 'month' && month === 'all' ? 'all' : range;
 
-  // Daily ranges are fetched on demand; the 24h view reuses the shared hourly series.
+  // Daily ranges are fetched on demand; the 24h and 7d views are hourly and reuse the shared hourly series.
   const win = useMemo(() => {
-    if (effective === '24h') return null;
+    if (effective === '24h' || effective === '7d') return null;
     const today = Date.now();
-    if (effective === '7d') return { startKey: utcDayKey(today - 6 * 86_400_000), start: Date.parse(`${utcDayKey(today - 6 * 86_400_000)}T00:00:00Z`), end: today };
     if (effective === '30d') return { startKey: utcDayKey(today - 29 * 86_400_000), start: Date.parse(`${utcDayKey(today - 29 * 86_400_000)}T00:00:00Z`), end: today };
     if (effective === 'month') { const b = monthBounds(month); return { startKey: utcDayKey(b.start), ...b }; }
     return { startKey: null as string | null, start: Date.parse('2025-01-01T00:00:00Z'), end: today };
@@ -85,14 +87,17 @@ const ActivityChart: React.FC<{
   }, [win, cacheKey]);
 
   const buckets: Bucket[] = useMemo(() => {
-    if (effective === '24h') {
-      const cells = (hourly ? buildHourGrid(hourly.data, 24) : []);
+    if (effective === '24h' || effective === '7d') {
+      const week = effective === '7d';
+      const cells = (hourly ? buildHourGrid(hourly.data, week ? 168 : 24) : []);
       const byHour = new Map<string, RecentActivityEvent[]>();
       sales.forEach(e => { const k = hourKeyOf(e.timestamp); byHour.set(k, [...(byHour.get(k) ?? []), e]); });
       return cells.map(c => ({
         key: c.key,
-        title: `${formatHour(c.hour)}–${formatHour((c.hour + 1) % 24)}`,
-        axis: c.hour % 3 === 0 ? String(c.hour).padStart(2, '0') : '',
+        title: `${week ? `${dayTitle(c.dayKey, false)} · ` : ''}${formatHour(c.hour)}–${formatHour((c.hour + 1) % 24)}`,
+        axis: week
+          ? (c.hour === 0 ? `${HEBREW_WEEKDAYS_SHORT[weekdayOfDayKey(c.dayKey)]} ${parseInt(c.dayKey.slice(8), 10)}/${parseInt(c.dayKey.slice(5, 7), 10)}` : '')
+          : (c.hour % 3 === 0 ? String(c.hour).padStart(2, '0') : ''),
         views: c.views,
         clicks: c.clicks,
         sales: byHour.get(c.key) ?? [],
@@ -102,7 +107,7 @@ const ActivityChart: React.FC<{
     const days: DayCell[] = buildDayGrid(series.data, win.startKey, win.end);
     const salesByDay = new Map<string, RecentActivityEvent[]>();
     sales.forEach(e => { const k = e.timestamp.slice(0, 10); salesByDay.set(k, [...(salesByDay.get(k) ?? []), e]); });
-    const withSales = effective === '7d';
+    const withSales = false;
     const withYear = effective === 'all';
     // All-time axis: label month starts, but never more than ~5 so they stay readable.
     const monthStarts = days.map((d, i) => (d.key.endsWith('-01') ? i : -1)).filter(i => i >= 0);
@@ -111,8 +116,7 @@ const ActivityChart: React.FC<{
     return days.map((d, i) => {
       const dom = parseInt(d.key.slice(8), 10);
       let axis = '';
-      if (effective === '7d') axis = HEBREW_WEEKDAYS_SHORT[weekdayOfDayKey(d.key)];
-      else if (effective === 'all') axis = labelled.has(i) ? `${HEBREW_MONTHS_SHORT[parseInt(d.key.slice(5, 7), 10) - 1]} ${d.key.slice(2, 4)}` : '';
+      if (effective === 'all') axis = labelled.has(i) ? `${HEBREW_MONTHS_SHORT[parseInt(d.key.slice(5, 7), 10) - 1]} ${d.key.slice(2, 4)}` : '';
       else axis = i % 5 === 0 ? `${dom}/${parseInt(d.key.slice(5, 7), 10)}` : '';
       return { key: d.key, title: dayTitle(d.key, withYear), axis, views: d.views, clicks: d.clicks, sales: withSales ? salesByDay.get(d.key) ?? [] : null };
     });
@@ -126,6 +130,7 @@ const ActivityChart: React.FC<{
   const totalViews = buckets.reduce((s, b) => s + b.views, 0);
   const totalClicks = buckets.reduce((s, b) => s + b.clicks, 0);
   const totalSales = hasSales ? buckets.reduce((s, b) => s + (b.sales?.length ?? 0), 0) : 0;
+  const totalCommission = hasSales ? buckets.reduce((s, b) => s + (b.sales ?? []).reduce((t, e) => t + (e.commission ?? 0), 0), 0) : 0;
 
   const active = n > 0 ? Math.min(sel ?? (peak >= 0 ? peak : n - 1), n - 1) : null;
   const cur = active != null ? buckets[active] : null;
@@ -181,6 +186,12 @@ const ActivityChart: React.FC<{
                 <dd className="text-2xl font-bold leading-tight" style={{ color: INK_HEX.sales }}>{totalSales}</dd>
               </div>
             )}
+            {hasSales && totalCommission > 0 && (
+              <div>
+                <dt className="text-[13px] text-ink-dim">עמלה</dt>
+                <dd className="text-2xl font-bold text-white leading-tight">₪{Math.round(totalCommission)}</dd>
+              </div>
+            )}
           </dl>
 
           <p className="min-h-[48px] text-[15px] text-jungle-text" aria-live="polite">
@@ -192,10 +203,20 @@ const ActivityChart: React.FC<{
                 <span style={{ color: INK_HEX.view }}>{cur.views} צפיות</span>
                 <span style={{ color: INK_HEX.click }}> · {cur.clicks} קליקים</span>
                 {cur.sales && <span style={{ color: INK_HEX.sales }}> · {cur.sales.length} מכירות</span>}
-                {cur.sales && cur.sales.length > 0 && <span className="text-ink-dim"> ({cur.sales.map(s => s.partyName).filter(Boolean).join(', ')})</span>}
               </>
             )}
           </p>
+          {cur?.sales && cur.sales.length > 0 && (
+            <ul className="mb-3 space-y-1 text-[14px]">
+              {cur.sales.map(s => (
+                <li key={s.id} className="text-jungle-text">
+                  <span className="font-bold text-white">{s.partyName || 'מסיבה'}</span>
+                  <span style={{ color: INK_HEX.sales }}> · {ticketsOf(s)} כרטיסים</span>
+                  {s.commission != null && <span className="text-ink-dim"> · עמלה ₪{Math.round(s.commission * 100) / 100}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
 
           <div
             ref={box}
@@ -261,7 +282,7 @@ const ActivityChart: React.FC<{
             <li><span aria-hidden className="inline-block w-3 h-3 align-middle ml-2" style={{ background: INK_HEX.click }} />קליקים ל-GoOut</li>
             {hasSales && <li><span aria-hidden className="inline-block w-3 h-3 align-middle ml-2" style={{ background: INK_HEX.sales }} />מכירות מאושרות</li>}
           </ul>
-          {!hasSales && <p className="text-[12px] text-ink-dim mt-2">מכירות לפי יום מוצגות רק ב-24 שעות וב-7 ימים. סך המכירות לחודש למעלה.</p>}
+          {!hasSales && <p className="text-[12px] text-ink-dim mt-2">מכירות לפי שעה מוצגות רק ב-24 שעות וב-7 ימים. סך המכירות לחודש למעלה.</p>}
         </>
       )}
     </Panel>
