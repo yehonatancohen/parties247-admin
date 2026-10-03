@@ -31,7 +31,7 @@ npm run dev                    # :3000
 npm run lint && npx tsc --noEmit
 ```
 
-Deploy: push to `master` → Vercel. No test runner yet; when adding one, unit-test the
+Deploy: push to `master` → Vercel. Vitest (`npm test`, `src/**/*.test.ts`) covers `src/lib/analytics.ts`; still worth unit-testing the
 aggregation/sorting helpers in `AdminAnalytics.tsx` (month filtering, unique-by-event
 totals — both had bugs fixed in 2026-08) after extracting them into `src/lib/`.
 

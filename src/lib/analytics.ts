@@ -47,18 +47,11 @@ export const eventMonth = (isoDate: string | null | undefined): string | null =>
 };
 
 // Funnel API windows site views/redirects/ticket deltas with `days` (max 180).
-// Cover from the start of the selected calendar month through today so a month
-// view is not clipped by the old rolling-30 default.
-export const daysCoveringMonth = (yyyyMm: string): number => {
-  if (yyyyMm === 'all') return 180;
-  const today = jerusalemTodayIso();
-  const [ty, tm, td] = today.split('-').map(Number);
-  const [sy, sm] = yyyyMm.split('-').map(Number);
-  const start = Date.UTC(sy, sm - 1, 1);
-  const end = Date.UTC(ty, tm - 1, td);
-  const diff = Math.round((end - start) / 86_400_000) + 1;
-  return Math.min(180, Math.max(1, diff));
-};
+// Always ask for the maximum: the month view filters rows by the event's own
+// date and shows lifetime tickets next to them, so clicks must cover the same
+// span. Windowing from the 1st of the selected month made parties whose buyers
+// clicked the month before show tickets with 0 clicks.
+export const FUNNEL_WINDOW_DAYS = 180;
 
 export const calculateCTR = (views: number, clicks: number) => {
   if (views === 0) return 0;
@@ -306,7 +299,7 @@ export const relativeTimeHe = (iso: string, nowMs = Date.now()): string => {
 
 // --- Month view: one merged row per party, plus the totals the hero shows ---
 // Moved verbatim from the parties tab so the overview and the table can never
-// disagree. Click metrics and new sale deltas are windowed by the funnel range;
+// disagree. Click metrics and sale deltas cover the last FUNNEL_WINDOW_DAYS;
 // lifetime tickets/commission and GoOut gross are cumulative for events whose
 // own date falls in `month` (Asia/Jerusalem).
 export const mergePartyRows = (

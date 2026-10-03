@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { getPartyFunnel, getPartySales } from '../../services/api';
 import { FunnelResponse, PartySalesRecord } from '../../data/types';
 import {
-  MergedPartyRow, PartySortKey, daysCoveringMonth, exportPartiesToCsv, formatMonthLabel,
+  MergedPartyRow, PartySortKey, FUNNEL_WINDOW_DAYS, exportPartiesToCsv, formatMonthLabel,
   formatNumber, indexSalesByParty, mergePartyRows, monthTotals, jerusalemYyyyMm, readAnalyticsCache, sortMergedPartyRows, writeAnalyticsCache,
 } from '../../lib/analytics';
 import { GhostButton, InkKey, Panel, Segmented, Skeleton } from './ui';
@@ -31,9 +31,9 @@ const COLUMNS: Col[] = [
   { key: 'status', label: 'סטטוס', core: false, cls: 'text-ink-dim', render: r => (r.isActive ? 'פעיל' : 'עבר') },
   { key: 'v2c', label: 'צפייה←קליק', core: false, cls: 'text-ink-dim', render: r => (r.viewToRedirectRate != null ? `${r.viewToRedirectRate.toFixed(1)}%` : '—') },
   { key: 'gv', label: 'צפיות ב-GoOut', sort: 'realGoOutViews', core: false, cls: 'text-ink-dim', render: r => (r.realGoOutViews ?? '—') },
-  { key: 'p', label: 'מכירות בטווח', sort: 'purchases', core: false, cls: 'text-ink-dim', render: r => r.purchases },
+  { key: 'p', label: 'מכירות ב-180 יום', sort: 'purchases', core: false, cls: 'text-ink-dim', render: r => r.purchases },
   { key: 'c2p', label: 'קליק←מכירה', core: false, cls: 'text-ink-dim', render: r => (r.redirectToPurchaseRate != null ? `${r.redirectToPurchaseRate.toFixed(1)}%` : '—') },
-  { key: 'rev', label: 'עמלה בטווח', core: false, cls: 'text-ink-dim', render: r => (r.revenue > 0 ? `₪${r.revenue.toFixed(0)}` : '—') },
+  { key: 'rev', label: 'עמלה ב-180 יום', core: false, cls: 'text-ink-dim', render: r => (r.revenue > 0 ? `₪${r.revenue.toFixed(0)}` : '—') },
 ];
 
 const PartiesTab: React.FC = () => {
@@ -60,7 +60,7 @@ const PartiesTab: React.FC = () => {
     setFunnel(cached);
     setLoading(!cached);
     let alive = true;
-    getPartyFunnel(daysCoveringMonth(month), month)
+    getPartyFunnel(FUNNEL_WINDOW_DAYS, month)
       .then(data => { if (alive) { setFunnel(data); writeAnalyticsCache(`funnel:${month}`, data); } })
       .catch(err => console.error('Failed to load funnel analytics', err))
       .finally(() => { if (alive) setLoading(false); });

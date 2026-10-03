@@ -4,7 +4,7 @@ import RecentActivityFeed from './RecentActivityFeed';
 import { getAnalyticsSummary, getDetailedAnalytics, getPartyFunnel, getPartySales, getRecentActivity } from '../services/api';
 import { AnalyticsSummary, DetailedAnalyticsResponse, FunnelResponse, PartySalesRecord, RecentActivityEvent } from '../data/types';
 import {
-  daysCoveringMonth, formatMonthLabel, indexSalesByParty, jerusalemYyyyMm, mergePartyRows, monthTotals,
+  FUNNEL_WINDOW_DAYS, formatMonthLabel, indexSalesByParty, jerusalemYyyyMm, mergePartyRows, monthTotals,
   readAnalyticsCache, writeAnalyticsCache,
 } from '../lib/analytics';
 import SalesHero from './analytics/SalesHero';
@@ -52,7 +52,7 @@ const AdminAnalytics: React.FC = () => {
     setFunnel(cached);
     setFunnelLoading(!cached);
     try {
-      const data = await getPartyFunnel(daysCoveringMonth(m), m);
+      const data = await getPartyFunnel(FUNNEL_WINDOW_DAYS, m);
       setFunnel(data);
       setMonthsAvailable(prev => Array.from(new Set([...prev, ...data.realMonthsAvailable])));
       writeAnalyticsCache(`funnel:${m}`, data);
