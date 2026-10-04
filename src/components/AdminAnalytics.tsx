@@ -40,8 +40,12 @@ const AdminAnalytics: React.FC = () => {
     const cachedHourly = readAnalyticsCache<DetailedAnalyticsResponse>('peaks:7d');
     const cachedSales = readAnalyticsCache<PartySalesRecord[]>('sales');
     const cachedFunnel = readAnalyticsCache<FunnelResponse>(`funnel:${jerusalemYyyyMm()}`);
+    const cachedLastSale = readAnalyticsCache<RecentActivityEvent | null>('lastSale');
+    const cachedSales7 = readAnalyticsCache<RecentActivityEvent[]>('sales7');
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (cachedSummary) setSummary(cachedSummary);
+    if (cachedLastSale) setLastSale(cachedLastSale);
+    if (cachedSales7) setSales7(cachedSales7);
     if (cachedHourly) setHourly(cachedHourly);
     if (cachedSales) setSalesRows(cachedSales);
     if (cachedFunnel) { setFunnel(cachedFunnel); setMonthsAvailable(cachedFunnel.realMonthsAvailable); }
@@ -58,6 +62,7 @@ const AdminAnalytics: React.FC = () => {
       writeAnalyticsCache(`funnel:${m}`, data);
     } catch (err) {
       console.error('Failed to load month totals', err);
+      setError('חלק מהנתונים לא נטענו ומוצגים מהטעינה הקודמת. נסה לרענן.');
     } finally {
       setFunnelLoading(false);
     }
@@ -66,23 +71,28 @@ const AdminAnalytics: React.FC = () => {
   const loadShared = useCallback(async () => {
     setError(null);
     setHourlyLoading(true);
+    // A failed call keeps whatever was on screen (cache or previous load); the
+    // banner says the numbers may be stale instead of silently showing gaps.
+    let failed = false;
+    const fail = (what: string) => (err: unknown) => { console.error(`Failed to load ${what}`, err); failed = true; };
     await Promise.all([
       getPartySales()
         .then(rows => { setSalesRows(rows); writeAnalyticsCache('sales', rows); })
-        .catch(err => console.error('Failed to load party sales', err)),
+        .catch(fail('party sales')),
       getAnalyticsSummary()
         .then(d => { setSummary(d); writeAnalyticsCache('summary', d); })
-        .catch(err => { console.error('Failed to load analytics summary', err); if (!readAnalyticsCache('summary')) setError('לא הצלחנו לטעון את הנתונים. נסה לרענן.'); }),
+        .catch(fail('analytics summary')),
       getDetailedAnalytics('7d', 'hour')
         .then(d => { setHourly(d); writeAnalyticsCache('peaks:7d', d); })
-        .catch(err => console.error('Failed to load hourly series', err)),
+        .catch(fail('hourly series')),
       getRecentActivity({ types: ['goout_purchase'], limit: 1, hours: 24 * 30 })
-        .then(r => setLastSale(r.events[0] ?? null))
-        .catch(() => {}),
+        .then(r => { const e = r.events[0] ?? null; setLastSale(e); writeAnalyticsCache('lastSale', e); })
+        .catch(fail('last sale')),
       getRecentActivity({ types: ['goout_purchase'], limit: 200, hours: 24 * 7 })
-        .then(r => setSales7(r.events))
-        .catch(() => {}),
+        .then(r => { setSales7(r.events); writeAnalyticsCache('sales7', r.events); })
+        .catch(fail('7-day sales')),
     ]);
+    if (failed) setError('חלק מהנתונים לא נטענו ומוצגים מהטעינה הקודמת. נסה לרענן.');
     setHourlyLoading(false);
   }, []);
 
