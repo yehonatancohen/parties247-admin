@@ -132,6 +132,22 @@ const mapCarouselToFrontend = (backendCarousel: any): Carousel => {
   };
 };
 
+// Analytics reads go through this: the Render backend sometimes answers a burst of
+// parallel requests with a 502/503/429 or drops the connection. One retry turns
+// "half the dashboard is empty" into "it loaded a second later". GETs only.
+const RETRYABLE_STATUS = new Set([429, 502, 503, 504]);
+const getWithRetry = async (url: string, init: RequestInit = {}, retries = 2): Promise<Response> => {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const response = await fetch(url, init);
+      if (!RETRYABLE_STATUS.has(response.status) || attempt >= retries) return response;
+    } catch (err) {
+      if (attempt >= retries) throw err;
+    }
+    await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+  }
+};
+
 // --- UPDATED API Functions ---
 
 
@@ -493,7 +509,7 @@ export const recordPartyView = async (payload: PartyAnalyticsPayload): Promise<v
 };
 
 export const getAnalyticsSummary = async (): Promise<AnalyticsSummary> => {
-  const response = await fetch(`${ANALYTICS_API_BASE}/summary`);
+  const response = await getWithRetry(`${ANALYTICS_API_BASE}/summary`);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.message || 'Failed to fetch analytics summary');
   return {
@@ -516,7 +532,7 @@ export const getDetailedAnalytics = async (
   // Custom window (ISO strings): the backend ignores `range` when both are present.
   if (custom) { params.append('start', custom.start); params.append('end', custom.end); }
 
-  const response = await fetch(`${API_URL}/admin/analytics/detailed?${params.toString()}`, {
+  const response = await getWithRetry(`${API_URL}/admin/analytics/detailed?${params.toString()}`, {
     headers: { ...getAuthHeader() },
   });
 
@@ -549,24 +565,18 @@ export const getRecentActivity = async (
   if (hours != null) params.set('hours', String(hours));
 
   const query = params.toString();
-  try {
-    const response = await fetch(`${ANALYTICS_API_BASE}/recent${query ? `?${query}` : ''}`, {
-      headers: { ...getAuthHeader() },
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      return {
-        events: Array.isArray(data.events) ? data.events : [],
-        total: typeof data.total === 'number' ? data.total : 0,
-        hasMore: Boolean(data.hasMore),
-      };
-    }
-  } catch (error) {
-    console.warn("Failed to fetch recent activity from API.", error);
-  }
-
-  return { events: [], total: 0, hasMore: false };
+  // Throws on failure (it used to return an empty list, which wiped the sales feed
+  // and "last sale" and overwrote their cache whenever the backend was slow).
+  const response = await getWithRetry(`${ANALYTICS_API_BASE}/recent${query ? `?${query}` : ''}`, {
+    headers: { ...getAuthHeader() },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || 'Failed to fetch recent activity');
+  return {
+    events: Array.isArray(data.events) ? data.events : [],
+    total: typeof data.total === 'number' ? data.total : 0,
+    hasMore: Boolean(data.hasMore),
+  };
 };
 
 export const getVisitorAnalytics = async (
@@ -574,7 +584,7 @@ export const getVisitorAnalytics = async (
 ): Promise<VisitorAnalyticsResponse> => {
   const params = new URLSearchParams({ range });
   try {
-    const response = await fetch(`${API_URL}/admin/analytics/visitors?${params.toString()}`, {
+    const response = await getWithRetry(`${API_URL}/admin/analytics/visitors?${params.toString()}`, {
       headers: { ...getAuthHeader() },
     });
 
@@ -599,7 +609,7 @@ export const getVisitorAnalytics = async (
 };
 
 export const getPartySales = async (): Promise<PartySalesRecord[]> => {
-  const response = await fetch(`${API_URL}/admin/analytics/sales`, {
+  const response = await getWithRetry(`${API_URL}/admin/analytics/sales`, {
     headers: { ...getAuthHeader() },
   });
   const data = await response.json().catch(() => ({}));
@@ -633,7 +643,7 @@ const normalizeFunnelStage = (item: any) => ({
 
 export const getPartyFunnel = async (days: number = 30, realMonth: string = 'all'): Promise<FunnelResponse> => {
   const params = new URLSearchParams({ days: String(days), realMonth });
-  const response = await fetch(`${API_URL}/admin/analytics/funnel?${params.toString()}`, {
+  const response = await getWithRetry(`${API_URL}/admin/analytics/funnel?${params.toString()}`, {
     headers: { ...getAuthHeader() },
   });
   const data = await response.json().catch(() => ({}));
@@ -678,7 +688,7 @@ export type AttributionResponse = {
 };
 
 export const getAttribution = async (days: number = 30): Promise<AttributionResponse> => {
-  const response = await fetch(`${API_URL}/admin/analytics/attribution?days=${days}`, {
+  const response = await getWithRetry(`${API_URL}/admin/analytics/attribution?days=${days}`, {
     headers: { ...getAuthHeader() },
   });
   const data = await response.json().catch(() => ({}));
