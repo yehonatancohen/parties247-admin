@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { getHolidayCuration, getParties, saveHolidayCuration } from '../services/api';
-import { Party } from '../data/types';
+import { getHolidayCuration, getParties, getPartyCommission, saveHolidayCuration } from '../services/api';
+import { Party, PartyCommission } from '../data/types';
 import {
   HOLIDAYS, HolidayCuration, getHolidayWindow, partiesInWindow, previewHolidayList,
 } from '../lib/holidays';
@@ -28,7 +28,27 @@ const partyWhen = (date: string) => {
 const sameCuration = (a: HolidayCuration, b: HolidayCuration) =>
   a.partyIds.join(',') === b.partyIds.join(',') && a.hiddenIds.join(',') === b.hiddenIds.join(',');
 
-const PartyLine: React.FC<{ party: Party; badge?: string; children?: React.ReactNode }> = ({ party, badge, children }) => (
+const shekels = (n: number) => `₪${n.toLocaleString('he-IL', { maximumFractionDigits: n < 100 ? 2 : 0 })}`;
+
+// Our commission (not GoOut's gross): rate per ticket, then what it earned so far.
+const CommissionLine: React.FC<{ c?: PartyCommission }> = ({ c }) => {
+  if (!c) return null;
+  const rate = c.tier === 'account1'
+    ? `${shekels(c.perTicket)} לכרטיס`
+    : `6% · ${c.perTicketEstimated ? '~' : ''}${shekels(c.perTicket)} לכרטיס`;
+  return (
+    <p className="text-[13px] truncate">
+      <span className="text-ink-sales">{rate}</span>
+      <span className="text-ink-dim">
+        {c.ticketsSold > 0
+          ? ` · הרווחת ${shekels(c.earned)} (${c.ticketsSold === 1 ? 'כרטיס אחד' : `${c.ticketsSold} כרטיסים`})`
+          : ' · עוד אין מכירות'}
+      </span>
+    </p>
+  );
+};
+
+const PartyLine: React.FC<{ party: Party; badge?: string; commission?: PartyCommission; children?: React.ReactNode }> = ({ party, badge, commission, children }) => (
   <li className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 border-b border-wood-brown last:border-b-0">
     {party.imageUrl
       // eslint-disable-next-line @next/next/no-img-element
@@ -40,6 +60,7 @@ const PartyLine: React.FC<{ party: Party; badge?: string; children?: React.React
         {party.name}
       </p>
       <p className="text-ink-dim text-[13px] truncate">{partyWhen(party.date)}{party.location?.name ? ` · ${party.location.name}` : ''}</p>
+      <CommissionLine c={commission} />
     </div>
     {/* Own row on phones so the name isn't squeezed to a few letters. */}
     <div className="flex items-center gap-1 shrink-0 w-full sm:w-auto justify-end">{children}</div>
@@ -63,11 +84,14 @@ const AdminHolidayPages: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [query, setQuery] = useState('');
+  const [commission, setCommission] = useState<Record<string, PartyCommission>>({});
 
   const def = HOLIDAYS[slug];
   const holidayWindow = useMemo(() => getHolidayWindow(def), [def]);
 
   useEffect(() => {
+    // Commission is a nice-to-have on this screen: rows just render without it if it fails.
+    getPartyCommission().then(setCommission).catch(err => console.error('Failed to load party commission', err));
     getParties()
       .then(setParties)
       .catch(() => setMessage({ kind: 'error', text: 'לא הצלחתי לטעון את רשימת המסיבות. נסה לרענן.' }));
@@ -164,6 +188,7 @@ const AdminHolidayPages: React.FC = () => {
   };
 
   const busy = loading || !parties;
+  const pageEarned = list.reduce((sum, p) => sum + (commission[p.id]?.earned ?? 0), 0);
 
   return (
     <div className="max-w-[900px] mx-auto space-y-4">
@@ -212,7 +237,10 @@ const AdminHolidayPages: React.FC = () => {
           </p>
         )}
 
-        <h4 className="text-white font-bold text-[15px] mb-1">כך זה יופיע באתר ({busy ? '…' : list.length})</h4>
+        <h4 className="text-white font-bold text-[15px] mb-1">
+          כך זה יופיע באתר ({busy ? '…' : list.length})
+          {!busy && pageEarned > 0 && <span className="text-ink-sales text-[13px] font-medium mr-2">· הרווחת מהמסיבות בעמוד {shekels(pageEarned)}</span>}
+        </h4>
         {busy ? (
           <div className="space-y-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-14" />)}</div>
         ) : list.length === 0 ? (
@@ -223,7 +251,7 @@ const AdminHolidayPages: React.FC = () => {
               const pinned = pinnedSet.has(p.id);
               const idx = draft.partyIds.indexOf(p.id);
               return (
-                <PartyLine key={p.id} party={p} badge={pinned ? `נעוץ ${idx + 1}` : undefined}>
+                <PartyLine key={p.id} party={p} commission={commission[p.id]} badge={pinned ? `נעוץ ${idx + 1}` : undefined}>
                   {pinned ? (
                     <>
                       <SmallButton onClick={() => move(p.id, -1)} disabled={idx === 0} aria-label={`הזז למעלה: ${p.name}`}>▲</SmallButton>
@@ -256,7 +284,7 @@ const AdminHolidayPages: React.FC = () => {
             ) : (
               <ul className="mt-2">
                 {searchResults.map(p => (
-                  <PartyLine key={p.id} party={p}>
+                  <PartyLine key={p.id} party={p} commission={commission[p.id]}>
                     <SmallButton onClick={() => { pin(p.id); setQuery(''); }}>הוסף</SmallButton>
                   </PartyLine>
                 ))}
@@ -270,7 +298,7 @@ const AdminHolidayPages: React.FC = () => {
             <h4 className="text-white font-bold text-[15px] mb-1">מוסתרות מהעמוד ({hiddenParties.length})</h4>
             <ul>
               {hiddenParties.map(p => (
-                <PartyLine key={p.id} party={p}>
+                <PartyLine key={p.id} party={p} commission={commission[p.id]}>
                   <SmallButton onClick={() => unhide(p.id)}>החזר</SmallButton>
                 </PartyLine>
               ))}

@@ -1,4 +1,4 @@
-import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse, WaOverview, WaGroup, WaGroupBundle, WaTemplate, WaCampaign, WaFunnelResponse, WaSettings, WaMembersOverlap, WaSendFact, PromoResponse, PromoCandidate } from '../data/types';
+import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse, WaOverview, WaGroup, WaGroupBundle, WaTemplate, WaCampaign, WaFunnelResponse, WaSettings, WaMembersOverlap, WaSendFact, PromoResponse, PromoCandidate, PartyCommission } from '../data/types';
 import { SeoPageConfig } from '../lib/seoparties';
 import type { HolidayCuration } from '@/lib/holidays';
 
@@ -373,6 +373,24 @@ export const setDefaultReferral = async (code: string): Promise<void> => {
     body: JSON.stringify({ code }),
   });
   if (!response.ok) throw new Error('Failed to set default referral code');
+};
+
+export const getPartyCommission = async (): Promise<Record<string, PartyCommission>> => {
+  const response = await getWithRetry(`${API_URL}/admin/parties/commission`, { headers: { ...getAuthHeader() } });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || 'Failed to fetch party commission');
+  const out: Record<string, PartyCommission> = {};
+  for (const [id, c] of Object.entries((data.parties ?? {}) as Record<string, Partial<PartyCommission>>)) {
+    out[id] = {
+      tier: c.tier === 'account1' ? 'account1' : 'account2',
+      perTicket: typeof c.perTicket === 'number' ? c.perTicket : 0,
+      perTicketEstimated: Boolean(c.perTicketEstimated),
+      ticketPrice: typeof c.ticketPrice === 'number' ? c.ticketPrice : null,
+      ticketsSold: normalizeCount(c.ticketsSold),
+      earned: typeof c.earned === 'number' ? c.earned : 0,
+    };
+  }
+  return out;
 };
 
 export const getHolidayCuration = async (slug: string): Promise<HolidayCuration> => {
