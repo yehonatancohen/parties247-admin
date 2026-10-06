@@ -1,5 +1,6 @@
 import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse, WaOverview, WaGroup, WaGroupBundle, WaTemplate, WaCampaign, WaFunnelResponse, WaSettings, WaMembersOverlap, WaSendFact, PromoResponse, PromoCandidate } from '../data/types';
 import { SeoPageConfig } from '../lib/seoparties';
+import type { HolidayCuration } from '@/lib/holidays';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')}/api`
@@ -372,6 +373,26 @@ export const setDefaultReferral = async (code: string): Promise<void> => {
     body: JSON.stringify({ code }),
   });
   if (!response.ok) throw new Error('Failed to set default referral code');
+};
+
+export const getHolidayCuration = async (slug: string): Promise<HolidayCuration> => {
+  const response = await fetch(`${API_URL}/holiday-pages/${encodeURIComponent(slug)}`, { cache: 'no-store' });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || 'Failed to fetch holiday page');
+  const ids = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+  return { partyIds: ids(data.partyIds), hiddenIds: ids(data.hiddenIds) };
+};
+
+export const saveHolidayCuration = async (slug: string, curation: HolidayCuration): Promise<void> => {
+  const response = await fetch(`${API_URL}/admin/holiday-pages/${encodeURIComponent(slug)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    body: JSON.stringify(curation),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || 'Failed to save holiday page');
+  }
 };
 
 export const getCarousels = async (): Promise<Carousel[]> => {

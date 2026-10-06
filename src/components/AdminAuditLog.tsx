@@ -25,6 +25,7 @@ const ACTION_LABELS: Record<string, string> = {
     add_section: 'הוספת סקשן',
     import_carousel_from_urls: 'ייבוא אירועים מקישורים',
     set_referral: 'עדכון קוד הפניה',
+    set_holiday_page: 'עדכון עמוד חג',
     manual_price_scan: 'סריקת מחירים ידנית',
     goout_approve: 'אישור אירוע Go-Out',
     goout_reject: 'דחיית אירוע Go-Out',
