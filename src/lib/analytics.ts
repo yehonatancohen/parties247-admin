@@ -67,9 +67,21 @@ export const readAnalyticsCache = <T,>(key: string): T | null => {
   }
 };
 
+// When a cached value was fetched (epoch ms). Cached data is shown instantly on
+// open, so the UI needs this to say how old it is and where its charts end.
+export const readAnalyticsCacheAt = (key: string): number | null => {
+  try {
+    const value = Number(localStorage.getItem(`parties247:analytics:${key}:at`));
+    return Number.isFinite(value) && value > 0 ? value : null;
+  } catch {
+    return null;
+  }
+};
+
 export const writeAnalyticsCache = (key: string, value: unknown) => {
   try {
     localStorage.setItem(`parties247:analytics:${key}`, JSON.stringify(value));
+    localStorage.setItem(`parties247:analytics:${key}:at`, String(Date.now()));
   } catch {
     // Keep analytics usable when storage is unavailable or full.
   }

@@ -48,9 +48,10 @@ const monthBounds = (yyyyMm: string) => {
 const ActivityChart: React.FC<{
   month: string;                              // month chip chosen above ('YYYY-MM' or 'all')
   hourly: DetailedAnalyticsResponse | null;   // shared 7d hourly series
+  hourlyAt: number | null;                    // when `hourly` was fetched; the grid ends there, not at "now"
   hourlyLoading: boolean;
   sales: RecentActivityEvent[];               // confirmed-sale events, last 7 days
-}> = ({ month, hourly, hourlyLoading, sales }) => {
+}> = ({ month, hourly, hourlyAt, hourlyLoading, sales }) => {
   const [range, setRange] = useState<Range>('24h');
   const [sel, setSel] = useState<number | null>(null);
   const [series, setSeries] = useState<DetailedAnalyticsResponse | null>(null);
@@ -89,7 +90,7 @@ const ActivityChart: React.FC<{
   const buckets: Bucket[] = useMemo(() => {
     if (effective === '24h' || effective === '7d') {
       const week = effective === '7d';
-      const cells = (hourly ? buildHourGrid(hourly.data, week ? 168 : 24) : []);
+      const cells = (hourly ? buildHourGrid(hourly.data, week ? 168 : 24, hourlyAt ?? undefined) : []);
       const byHour = new Map<string, RecentActivityEvent[]>();
       sales.forEach(e => { const k = hourKeyOf(e.timestamp); byHour.set(k, [...(byHour.get(k) ?? []), e]); });
       return cells.map(c => ({
@@ -120,7 +121,7 @@ const ActivityChart: React.FC<{
       else axis = i % 5 === 0 ? `${dom}/${parseInt(d.key.slice(5, 7), 10)}` : '';
       return { key: d.key, title: dayTitle(d.key, withYear), axis, views: d.views, clicks: d.clicks, sales: withSales ? salesByDay.get(d.key) ?? [] : null };
     });
-  }, [effective, hourly, series, win, sales]);
+  }, [effective, hourly, hourlyAt, series, win, sales]);
 
   const n = buckets.length;
   const hasSales = n > 0 && buckets[0].sales !== null;
