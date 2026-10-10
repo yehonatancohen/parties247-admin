@@ -106,7 +106,7 @@ const ClonePartyModal: React.FC<{ party: Party; onClose: () => void; onClone: (u
 };
 
 import { pageLinkOptions } from '../data/pageLinks';
-import { resyncListing, unlockListingField } from '../services/listings';
+import { resyncListing, setListingStatus, unlockListingField } from '../services/listings';
 import { cloneParty, triggerPriceUpdate } from '@/services/api';
 
 const sanitizeGoOutUrl = (input: string): string => {
@@ -173,6 +173,10 @@ const TagInput: React.FC<{ tags: string[]; onTagsChange: (tags: string[]) => voi
 const pageTagOptions = pageLinkOptions
   .filter((option): option is typeof option & { tag: string } => Boolean(option.tag))
   .map((option) => ({ label: option.label, tag: option.tag }));
+
+const HIDDEN_WHY: Record<string, string> = {
+  private: 'private on GoOut', test: 'test event', gone: 'GoOut page is gone', admin: 'by you',
+};
 
 const LOCK_LABELS: Record<string, string> = {
   name: 'Name', date: 'Start time', location: 'Location', imageUrl: 'Image', description: 'Description',
@@ -848,6 +852,26 @@ const AdminDashboard: React.FC = () => {
     });
   }, [performCloneAsPromotion]);
 
+  // Hide = off every list on the site and no buy button; the party's own
+  // page still opens for someone who has the link. Kept locally so the row
+  // updates at once (the catalog itself refetches on its own schedule).
+  const [hiddenOverrides, setHiddenOverrides] = useState<Record<string, boolean>>({});
+  const [togglingHiddenIds, setTogglingHiddenIds] = useState<string[]>([]);
+  const isPartyHidden = (party: Party) => hiddenOverrides[party.id] ?? party.listingStatus === 'hidden';
+
+  const handleToggleHidden = async (party: Party) => {
+    const hide = !isPartyHidden(party);
+    setTogglingHiddenIds(prev => [...prev, party.id]);
+    try {
+      await setListingStatus(party.id, hide ? 'hidden' : 'live');
+      setHiddenOverrides(prev => ({ ...prev, [party.id]: hide }));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to change visibility');
+    } finally {
+      setTogglingHiddenIds(prev => prev.filter(id => id !== party.id));
+    }
+  };
+
   const handleDeleteParty = useCallback((party: Party) => {
     setOpenMenuPartyId(null);
     setConfirmState({
@@ -872,6 +896,11 @@ const AdminDashboard: React.FC = () => {
           {/* Party Info */}
           <div className="flex-grow min-w-0 w-full">
             <p className="font-semibold text-jungle-text text-lg truncate m-0">{party.name}</p>
+            {isPartyHidden(party) && (
+              <p className="text-xs text-jungle-accent m-0">
+                Hidden from the site{HIDDEN_WHY[party.statusReason ?? ''] ? ` (${HIDDEN_WHY[party.statusReason ?? '']})` : ''} · opens by direct link only, no buy button
+              </p>
+            )}
             <p className="text-sm text-jungle-text/60 m-0">{party.location.name} - {new Date(party.date).toLocaleDateString('he-IL')}</p>
             <div className="flex items-center gap-2 mt-2">
               <label htmlFor={`ref-${party.id}`} className="text-xs text-jungle-text/60 whitespace-nowrap">Ref:</label>
@@ -957,6 +986,14 @@ const AdminDashboard: React.FC = () => {
                 </>
               )}
             </div>
+
+            <button
+              onClick={() => handleToggleHidden(party)}
+              disabled={togglingHiddenIds.includes(party.id)}
+              className={`${rowActionButtonClass} bg-jungle-surface text-jungle-text/80 hover:text-jungle-text border border-wood-brown`}
+            >
+              {isPartyHidden(party) ? 'Unhide' : 'Hide'}
+            </button>
 
             <button
               onClick={() => handleDeleteParty(party)}

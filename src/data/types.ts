@@ -20,6 +20,10 @@ export interface Party {
   soldOut?: boolean;
   /** Fields edited by hand that the GoOut sync no longer overwrites (backend Listing Guard). */
   locks?: string[];
+  /** `hidden` = off every list on the site, no buy button; the page still opens by direct link. */
+  listingStatus?: 'live' | 'hidden' | 'merged';
+  /** Why it is hidden: private / test / gone (automatic) or admin (by hand). */
+  statusReason?: string | null;
   region: 'דרום' | 'מרכז' | 'צפון' | 'לא ידוע';
   musicType: 'מיינסטרים' | 'טכנו' | 'טראנס' | 'אחר';
   eventType: 'מסיבת בית' | 'מסיבת מועדון' | 'מסיבת טבע' | 'פסטיבל' | 'אחר';

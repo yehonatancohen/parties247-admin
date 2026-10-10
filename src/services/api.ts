@@ -121,6 +121,8 @@ const mapPartyToFrontend = (backendParty: any): Party => {
     ticketPrice: backendParty.ticketPrice,
     soldOut: backendParty.soldOut ?? false,
     locks: Array.isArray(backendParty.locks) ? backendParty.locks : [],
+    listingStatus: backendParty.listingStatus,
+    statusReason: backendParty.statusReason ?? null,
   };
 };
 
@@ -155,9 +157,9 @@ const getWithRetry = async (url: string, init: RequestInit = {}, retries = 2): P
 
 export const getParties = async (filters?: SeoPageConfig["apiFilters"], includeHidden = false): Promise<Party[]> => {
   // Use 'upcoming=true' by default, if we also want past parties we need another param
-  // With the admin JWT the backend also returns each party's `locks` (and
-  // parties the Listing Guard hid or merged — those are managed on /issues,
-  // so they are left out of the catalog here).
+  // With the admin JWT the backend also returns each party's `locks` and the
+  // parties that are hidden from the site (shown in the catalog with an
+  // unhide button). Merged duplicates stay out — they are undone on /issues.
   const auth = getAuthHeader();
   const response = await fetch(`${API_URL}/parties?upcoming=true${auth.Authorization ? '&includeHidden=1' : ''}`, {
     headers: auth,
@@ -169,7 +171,7 @@ export const getParties = async (filters?: SeoPageConfig["apiFilters"], includeH
   const data = await response.json();
 
   let parties = data
-    .filter((raw: any) => !['hidden', 'merged'].includes(raw?.listingStatus))
+    .filter((raw: any) => raw?.listingStatus !== 'merged')
     .map(mapPartyToFrontend)
     .filter((party: Party) => party.slug);
 
