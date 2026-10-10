@@ -21,6 +21,8 @@ export type IssueType =
   | 'zero_tier'
   | 'location_vague'
   | 'title_date'
+  | 'test_listing'
+  | 'price_suspicious'
   | 'source_gone'
   | 'price_unverified'
   | 'stale_sync'

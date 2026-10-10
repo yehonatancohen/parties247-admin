@@ -481,3 +481,14 @@ export interface PromoResponse {
   candidates: PromoCandidate[];
   digest: string;
 }
+
+/** GET /api/admin/parties/commission: our commission for one upcoming party. */
+export interface PartyCommission {
+  tier: 'account1' | 'account2';
+  perTicket: number;
+  /** account2 party without a scraped price: perTicket assumes ₪100 tickets. */
+  perTicketEstimated: boolean;
+  ticketPrice: number | null;
+  ticketsSold: number;
+  earned: number;
+}

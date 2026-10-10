@@ -21,6 +21,8 @@ const TYPE_LABELS: Record<string, string> = {
   price_unverified: 'מחיר לא מאומת',
   stale_sync: 'לא מסונכרן',
   site_render: 'האתר לא תואם',
+  test_listing: 'אירוע בדיקה?',
+  price_suspicious: 'מחיר חשוד',
 };
 
 const FIELD_LABELS: Record<string, string> = {
@@ -168,6 +170,8 @@ const IssueCard: React.FC<{ issue: ListingIssue; onResolve: (issue: ListingIssue
         )}
         {issue.type === 'source_gone' && <p className="text-sm">העמוד בגו-אאוט לא נטען פעמיים ברצף. ייתכן שהאירוע בוטל או הוסר.</p>}
         {issue.type === 'price_unverified' && <p className="text-sm">לא הצלחנו לקרוא את סוגי הכרטיסים שלוש פעמים ברצף. המחיר באתר הוא האחרון שנראה.</p>}
+        {issue.type === 'test_listing' && <p className="text-sm">הכותרת בגו-אאוט נראית כמו אירוע בדיקה של מפיק.</p>}
+        {issue.type === 'price_suspicious' && <p className="text-sm">המחיר באתר הוא ₪{show(evidence.ticketPrice)}. כדאי לבדוק מול גו-אאוט.</p>}
         {issue.type === 'stale_sync' && <p className="text-sm">המסיבה לא סונכרנה מול גו-אאוט ביממה האחרונה.</p>}
         {issue.type === 'site_render' && (
           <ul className="text-sm space-y-0.5">
@@ -225,7 +229,7 @@ const IssueCard: React.FC<{ issue: ListingIssue; onResolve: (issue: ListingIssue
         {!isPair && issue.type !== 'zero_tier' && issue.type !== 'location_vague' && (
           <div className="flex flex-wrap gap-3">
             <button type="button" disabled={busy} onClick={() => act({ decision: 'ignore' })} className={btnQuiet}>בסדר, להתעלם</button>
-            {(issue.type === 'source_gone' || issue.type === 'title_date') && (
+            {['source_gone', 'title_date', 'test_listing', 'price_suspicious'].includes(issue.type) && (
               <button type="button" disabled={busy} onClick={() => act({ decision: 'hide' })} className={btnQuiet}>להסתיר מהאתר</button>
             )}
           </div>

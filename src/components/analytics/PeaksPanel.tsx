@@ -26,13 +26,13 @@ const dayLabel = (dayKey: string) => {
 
 const valueOf = (c: HourCell, metric: PeakMetric) => c[metric];
 
-const PeaksPanel: React.FC<{ data: DetailedAnalyticsResponse | null; loading: boolean }> = ({ data, loading }) => {
+const PeaksPanel: React.FC<{ data: DetailedAnalyticsResponse | null; asOf: number | null; loading: boolean }> = ({ data, asOf, loading }) => {
   const [metric, setMetric] = useState<PeakMetric>('visits');
   const [picked, setPicked] = useState<HourCell | null>(null);
   const meta = METRICS.find(m => m.value === metric)!;
   const hex = INK_HEX[meta.ink];
 
-  const grid = useMemo(() => (data ? buildHourGrid(data.data) : []), [data]);
+  const grid = useMemo(() => (data ? buildHourGrid(data.data, 168, asOf ?? undefined) : []), [data, asOf]);
   const last24 = useMemo(() => grid.slice(-24), [grid]);
 
   const stats = useMemo(() => {

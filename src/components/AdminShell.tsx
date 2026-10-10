@@ -12,6 +12,7 @@ const navItems = [
   { href: '/attribution', end: false, label: 'מקורות רכישה' },
   { href: '/', end: true, label: 'ניהול קטלוג' },
   { href: '/issues', end: false, label: 'בקרת מסיבות' },
+  { href: '/holidays', end: false, label: 'עמודי חגים' },
   { href: '/whatsapp', end: false, label: 'וואטסאפ' },
   { href: '/audit-log', end: false, label: 'יומן פעולות' },
 ];
