@@ -40,6 +40,7 @@ const TIER_LABELS: Record<string, string> = {
 
 const HIDDEN_REASONS: Record<string, string> = {
   private: 'אירוע פרטי בגו-אאוט', admin: 'הוסתר ידנית',
+  test: 'אירוע בדיקה של מפיק', gone: 'העמוד בגו-אאוט נעלם',
 };
 
 const money = (n: number | null | undefined) =>

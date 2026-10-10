@@ -17,11 +17,12 @@ route. Business model and data flow: workspace root `../CLAUDE.md`.
   commission (account1 first) for the next 3/7/14 days, each with an editable Hebrew
   message + copy / "open in WhatsApp" buttons, plus one roundup digest. Data and text come
   from `GET /api/admin/promo/whatsapp` (backend `promo.py`); this page only edits/copies.
-- `/issues` (`AdminIssues.tsx`, `services/listings.ts`) — the Listing Guard review queue:
-  questions the backend could not decide alone (same party listed twice? is this ₪0 ticket
-  free entry? no usable location), what the sync changed in the last 24 h, and upcoming
-  parties that are not listed (private / merged / hidden) with an undo. Rules live in the
-  backend's `listings.py`; this page only shows and answers.
+- `/issues` (`AdminIssues.tsx`, `services/listings.ts`) — the Listing Guard page. The
+  backend decides everything it can (duplicates are merged, private/test/vanished events
+  hidden), so this is mostly a log with an undo: what the sync changed in the last 24 h and
+  upcoming parties that are not listed (relisting one is remembered, the merge is not
+  repeated). The "waiting" tab only fills when the sync itself is broken. Rules live in the
+  backend's `listings.py`; this page only shows and undoes.
 - `/audit-log` — backend `adminAuditLog`.
 
 All data comes from `parties247_backend` via `src/services/api.ts`; JWT is kept in
