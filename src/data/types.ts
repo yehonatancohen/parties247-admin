@@ -18,6 +18,8 @@ export interface Party {
   originalUrl: string;
   ticketPrice?: number;
   soldOut?: boolean;
+  /** Fields edited by hand that the GoOut sync no longer overwrites (backend Listing Guard). */
+  locks?: string[];
   region: 'דרום' | 'מרכז' | 'צפון' | 'לא ידוע';
   musicType: 'מיינסטרים' | 'טכנו' | 'טראנס' | 'אחר';
   eventType: 'מסיבת בית' | 'מסיבת מועדון' | 'מסיבת טבע' | 'פסטיבל' | 'אחר';

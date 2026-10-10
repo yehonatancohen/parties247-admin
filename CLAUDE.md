@@ -17,6 +17,11 @@ route. Business model and data flow: workspace root `../CLAUDE.md`.
   commission (account1 first) for the next 3/7/14 days, each with an editable Hebrew
   message + copy / "open in WhatsApp" buttons, plus one roundup digest. Data and text come
   from `GET /api/admin/promo/whatsapp` (backend `promo.py`); this page only edits/copies.
+- `/issues` (`AdminIssues.tsx`, `services/listings.ts`) — the Listing Guard review queue:
+  questions the backend could not decide alone (same party listed twice? is this ₪0 ticket
+  free entry? no usable location), what the sync changed in the last 24 h, and upcoming
+  parties that are not listed (private / merged / hidden) with an undo. Rules live in the
+  backend's `listings.py`; this page only shows and answers.
 - `/audit-log` — backend `adminAuditLog`.
 
 All data comes from `parties247_backend` via `src/services/api.ts`; JWT is kept in
@@ -40,6 +45,10 @@ totals — both had bugs fixed in 2026-08) after extracting them into `src/lib/`
 - `src/services/api.ts`, `src/data/types.ts`, `src/lib/seoparties.ts` and `src/hooks/useParties.ts`
   are copied from the website repo and have drifted. Keep type changes (e.g. new fields on
   `PartySalesRecord` / `FunnelResponse`) in sync with the backend response, not the website.
+- Editing a party locks the fields you changed against the GoOut sync (backend
+  `party.locks`). The per-party refresh button calls the backend `resync`; there is no
+  client-side GoOut scraper any more (`scrapeService.ts` was deleted — saving a browser
+  scrape as an edit would lock every field).
 - Revenue figures here are **our commission** (account1 ₪25/ticket, account2 6%); the
   `real*` columns are GoOut's numbers. Don't mix them in a tile.
 - Look: 2026-10-02 redesign, "running order" world (ink-indigo ground, three data inks: yellow=sales/commission, orange=clicks, periwinkle=views; Rubik). Tokens live in `tailwind.config.cjs` (legacy `jungle-*` names remapped). The old jungle styling is intentionally gone; do not restore it. Analytics UI is in `src/components/analytics/`, aggregation helpers in `src/lib/analytics.ts`.

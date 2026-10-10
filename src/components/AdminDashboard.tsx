@@ -106,7 +106,7 @@ const ClonePartyModal: React.FC<{ party: Party; onClose: () => void; onClone: (u
 };
 
 import { pageLinkOptions } from '../data/pageLinks';
-import { scrapePartyDetails } from '../services/scrapeService';
+import { resyncListing, unlockListingField } from '../services/listings';
 import { cloneParty, triggerPriceUpdate } from '@/services/api';
 
 const sanitizeGoOutUrl = (input: string): string => {
@@ -174,9 +174,24 @@ const pageTagOptions = pageLinkOptions
   .filter((option): option is typeof option & { tag: string } => Boolean(option.tag))
   .map((option) => ({ label: option.label, tag: option.tag }));
 
+const LOCK_LABELS: Record<string, string> = {
+  name: 'Name', date: 'Start time', location: 'Location', imageUrl: 'Image', description: 'Description',
+  ticketPrice: 'Price', soldOut: 'Sold out', region: 'Region', areas: 'Areas', listingStatus: 'Listed/hidden',
+};
+
 const EditPartyModal: React.FC<{ party: Party; onClose: () => void; onSave: (updatedParty: Party) => Promise<void>; }> = ({ party, onClose, onSave }) => {
   const [formData, setFormData] = useState<Party>(party);
   const [isSaving, setIsSaving] = useState(false);
+  const [locks, setLocks] = useState<string[]>(party.locks ?? []);
+
+  const handleUnlock = async (field: string) => {
+    try {
+      await unlockListingField(party.id, field);
+      setLocks(prev => prev.filter(f => f !== field));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to unlock');
+    }
+  };
 
   useEffect(() => {
     setFormData(party);
@@ -187,10 +202,10 @@ const EditPartyModal: React.FC<{ party: Party; onClose: () => void; onSave: (upd
     if (name === 'location.name') {
       setFormData(prev => ({ ...prev, location: { ...prev.location, name: value } }));
     } else if (name === 'date') {
-      // Convert local datetime-local string to ISO string
-      const localDate = new Date(value);
-      const isoString = localDate.toISOString();
-      setFormData(prev => ({ ...prev, [name]: isoString }));
+      // Party dates are naive Israel wall-clock strings (the format GoOut
+      // uses). Keep the typed value as-is: toISOString() would shift it to
+      // UTC and store the party 2-3 hours early.
+      setFormData(prev => ({ ...prev, [name]: value ? `${value}:00.000` : prev.date }));
     } else if (name === 'ticketPrice') {
       setFormData(prev => ({ ...prev, [name]: value === '' ? undefined : Number(value) }));
     }
@@ -211,6 +226,8 @@ const EditPartyModal: React.FC<{ party: Party; onClose: () => void; onSave: (upd
   };
 
   const getLocalDateTimeString = (isoDate: string) => {
+    const wallClock = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.exec(isoDate || '');
+    if (wallClock && !/(Z|[+-]\d{2}:?\d{2})$/.test(isoDate)) return wallClock[0];
     const date = new Date(isoDate);
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -238,6 +255,25 @@ const EditPartyModal: React.FC<{ party: Party; onClose: () => void; onSave: (upd
           <button onClick={onClose} className="text-2xl text-jungle-text/70 hover:text-jungle-text">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
+          {locks.length > 0 && (
+            <div className="border border-wood-brown p-3 text-sm">
+              <p className="text-jungle-text/80 mb-2">
+                Edited by hand, so the GoOut sync leaves these alone. Unlock a field to let it follow GoOut again.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {locks.map((field) => (
+                  <button
+                    key={field}
+                    type="button"
+                    onClick={() => handleUnlock(field)}
+                    className="h-9 px-3 border border-jungle-lime text-jungle-lime hover:bg-jungle-lime hover:text-jungle-deep transition-colors"
+                  >
+                    {LOCK_LABELS[field] ?? field} · unlock
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div>
             <label htmlFor="name" className="block text-sm text-jungle-text/80 mb-1">Name</label>
             <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} className={inputClass} required />
@@ -358,13 +394,7 @@ const AdminDashboard: React.FC = () => {
   const ACTIVE_PARTIES_PAGE_SIZE = 15;
 
   const [promotionMessages, setPromotionMessages] = useState<Record<string, PromotionMessage>>({});
-  const [isRefreshingCovers, setIsRefreshingCovers] = useState(false);
-  const [coverRefreshStatus, setCoverRefreshStatus] = useState<string | null>(null);
-
   const [refreshingPartyIds, setRefreshingPartyIds] = useState<string[]>([]);
-
-  const [isRefreshingAllParses, setIsRefreshingAllParses] = useState(false);
-  const [refreshAllParsesStatus, setRefreshAllParsesStatus] = useState<string | null>(null);
 
   const [editingCarouselId, setEditingCarouselId] = useState<string | null>(null);
   const [editingCarouselTitle, setEditingCarouselTitle] = useState('');
@@ -437,20 +467,17 @@ const AdminDashboard: React.FC = () => {
 
     setRefreshingPartyIds(prev => [...prev, party.id]);
     try {
-      const scraped = await scrapePartyDetails(party.originalUrl);
-
-      // Exclude slug from the update to prevent overwriting it
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { slug, ...scrapedWithoutSlug } = scraped;
-
-      await updateParty({
-        ...party,
-        ...scrapedWithoutSlug,
-        tags: Array.from(new Set([...party.tags, ...scraped.tags]))
-      });
+      // The backend re-reads GoOut and applies the Listing Guard rules. (This
+      // used to scrape in the browser and save the result as a manual edit,
+      // which would now lock every field against future syncs.)
+      const { changes } = await resyncListing(party.id);
+      const changed = Object.keys(changes);
       setPromotionMessages(prev => ({
         ...prev,
-        [party.id]: { type: 'success', message: 'Party data refreshed! 🔄' }
+        [party.id]: {
+          type: 'success',
+          message: changed.length ? `Synced from GoOut: ${changed.join(', ')} updated. Reload to see it.` : 'Already in sync with GoOut.',
+        }
       }));
     } catch (error) {
       console.error('Failed to refresh party', error);
@@ -479,80 +506,6 @@ const AdminDashboard: React.FC = () => {
       // Error is handled in the context provider
     }
   };
-
-  const handleRefreshAllCoverImages = useCallback(async () => {
-    setCoverRefreshStatus(null);
-    setIsRefreshingCovers(true);
-
-    const targets = activeParties.filter((party) => party.originalUrl?.includes('go-out.co'));
-    if (targets.length === 0) {
-      setCoverRefreshStatus('No active go-out.co parties found.');
-      setIsRefreshingCovers(false);
-      return;
-    }
-
-    let updatedCount = 0;
-    let failedCount = 0;
-
-    for (const party of targets) {
-      try {
-        const scraped = await scrapePartyDetails(party.originalUrl);
-        if (scraped.imageUrl && scraped.imageUrl !== party.imageUrl) {
-          await updateParty({ ...party, imageUrl: scraped.imageUrl });
-          updatedCount += 1;
-        }
-      } catch (error) {
-        failedCount += 1;
-        console.error('Failed to refresh cover image for party', party.id, error);
-      }
-    }
-
-    setCoverRefreshStatus(
-      `Updated ${updatedCount} cover image${updatedCount === 1 ? '' : 's'}.` +
-      (failedCount ? ` ${failedCount} failed.` : '')
-    );
-    setIsRefreshingCovers(false);
-  }, [activeParties, updateParty]);
-
-  const handleRefreshAllPartyData = useCallback(async () => {
-    setRefreshAllParsesStatus(null);
-    setIsRefreshingAllParses(true);
-
-    const targets = activeParties.filter((party) => party.originalUrl?.includes('go-out.co'));
-    if (targets.length === 0) {
-      setRefreshAllParsesStatus('No active go-out.co parties found.');
-      setIsRefreshingAllParses(false);
-      return;
-    }
-
-    let updatedCount = 0;
-    let failedCount = 0;
-
-    for (const party of targets) {
-      try {
-        const scraped = await scrapePartyDetails(party.originalUrl);
-        // Exclude slug to prevent overwriting
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { slug, ...scrapedWithoutSlug } = scraped;
-
-        await updateParty({
-          ...party,
-          ...scrapedWithoutSlug,
-          tags: Array.from(new Set([...party.tags, ...scraped.tags]))
-        });
-        updatedCount += 1;
-      } catch (error) {
-        failedCount += 1;
-        console.error('Failed to refresh data for party', party.name, error);
-      }
-    }
-
-    setRefreshAllParsesStatus(
-      `Refreshed data for ${updatedCount} parties.` +
-      (failedCount ? ` ${failedCount} failed.` : '')
-    );
-    setIsRefreshingAllParses(false);
-  }, [activeParties, updateParty]);
 
   const handleSaveParty = async (updatedParty: Party) => {
     await updateParty(updatedParty);
@@ -634,8 +587,8 @@ const AdminDashboard: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await triggerPriceUpdate();
-      alert(`Price update complete.\nParties checked: ${result.checked}\nPrices updated: ${result.updated}`);
+      await triggerPriceUpdate();
+      alert('Full sync requested. Prices, names, dates, locations and images are re-read from GoOut within 30 minutes; see the "בקרת מסיבות" page for what changed.');
     } catch (e) {
       console.error("Price update failed", e);
       setError(e instanceof Error ? e.message : 'Failed to update prices');
@@ -1136,14 +1089,6 @@ const AdminDashboard: React.FC = () => {
             <h3 className="text-lg font-semibold mb-3 text-jungle-lime">Bulk Data Operations</h3>
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <button
-                onClick={handleRefreshAllCoverImages}
-                disabled={isRefreshingCovers || isRefreshingAllParses}
-                className="bg-jungle-lime text-jungle-deep font-bold py-2 px-4 rounded-md hover:bg-opacity-80 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isRefreshingCovers ? <LoadingSpinner /> : 'Refresh all cover images'}
-              </button>
-
-              <button
                 onClick={handleUpdatePrices}
                 disabled={isLoading}
                 className="bg-emerald-500 text-white font-bold py-2 px-4 rounded-md hover:bg-emerald-600 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -1151,26 +1096,11 @@ const AdminDashboard: React.FC = () => {
                 {isLoading ? <LoadingSpinner /> : (
                   <>
                     <RefreshIcon className="w-4 h-4" />
-                    Update All Prices
+                    Sync everything with GoOut
                   </>
                 )}
               </button>
 
-              <button
-                onClick={handleRefreshAllPartyData}
-                disabled={isRefreshingCovers || isRefreshingAllParses}
-                className="bg-blue-500 text-white font-bold py-2 px-4 rounded-md hover:bg-opacity-80 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isRefreshingAllParses ? <LoadingSpinner /> : 'Refresh ALL Data'}
-              </button>
-            </div>
-            <div className="mt-2">
-              {coverRefreshStatus && (
-                <p className="text-sm text-jungle-text/80">{coverRefreshStatus}</p>
-              )}
-              {refreshAllParsesStatus && (
-                <p className="text-sm text-jungle-text/80">{refreshAllParsesStatus}</p>
-              )}
             </div>
           </div>
         </div>

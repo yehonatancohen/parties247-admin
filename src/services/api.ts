@@ -119,6 +119,7 @@ const mapPartyToFrontend = (backendParty: any): Party => {
     performer: backendParty.performer,
     ticketPrice: backendParty.ticketPrice,
     soldOut: backendParty.soldOut ?? false,
+    locks: Array.isArray(backendParty.locks) ? backendParty.locks : [],
   };
 };
 
@@ -137,7 +138,12 @@ const mapCarouselToFrontend = (backendCarousel: any): Carousel => {
 
 export const getParties = async (filters?: SeoPageConfig["apiFilters"], includeHidden = false): Promise<Party[]> => {
   // Use 'upcoming=true' by default, if we also want past parties we need another param
-  const response = await fetch(`${API_URL}/parties?upcoming=true`, {
+  // With the admin JWT the backend also returns each party's `locks` (and
+  // parties the Listing Guard hid or merged — those are managed on /issues,
+  // so they are left out of the catalog here).
+  const auth = getAuthHeader();
+  const response = await fetch(`${API_URL}/parties?upcoming=true${auth.Authorization ? '&includeHidden=1' : ''}`, {
+    headers: auth,
     next: { revalidate: 60 },
   });
 
@@ -145,7 +151,10 @@ export const getParties = async (filters?: SeoPageConfig["apiFilters"], includeH
 
   const data = await response.json();
 
-  let parties = data.map(mapPartyToFrontend).filter((party: Party) => party.slug);
+  let parties = data
+    .filter((raw: any) => !['hidden', 'merged'].includes(raw?.listingStatus))
+    .map(mapPartyToFrontend)
+    .filter((party: Party) => party.slug);
 
   // Filter out promotion parties unless explicitly requested
   if (!includeHidden) {
