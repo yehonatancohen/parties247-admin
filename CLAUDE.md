@@ -18,10 +18,11 @@ route. Business model and data flow: workspace root `../CLAUDE.md`.
   message + copy / "open in WhatsApp" buttons, plus one roundup digest. Data and text come
   from `GET /api/admin/promo/whatsapp` (backend `promo.py`); this page only edits/copies.
 - `/issues` (`AdminIssues.tsx`, `services/listings.ts`) — the Listing Guard page. The
-  backend decides everything it can (duplicates are merged, private/test/vanished events
-  hidden), so this is mostly a log with an undo: what the sync changed in the last 24 h and
-  upcoming parties that are not listed (relisting one is remembered, the merge is not
-  repeated). The "waiting" tab only fills when the sync itself is broken. Rules live in the
+  backend decides everything it can (duplicates are merged, test/vanished events hidden;
+  private-on-GoOut events stay listed since 2026-10-13), so this is mostly a log with an
+  undo: what the sync changed in the last 24 h and upcoming parties that are not listed,
+  each merged one showing the party it was folded into (`mergedIntoParty`). Relisting one
+  is remembered, the merge is not repeated. The "waiting" tab only fills when the sync itself is broken. Rules live in the
   backend's `listings.py`; this page only shows and undoes.
 - `/audit-log` — backend `adminAuditLog`.
 
