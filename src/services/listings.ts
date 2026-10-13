@@ -60,6 +60,9 @@ export interface ListingCard {
   statusReason: string | null;
   locks: string[];
   canonicalUrl: string | null;
+  /** Merged listing in the hidden-parties view: the party it was folded into,
+   *  null if that party is gone, undefined when the backend didn't say. */
+  mergedIntoParty?: MergedIntoParty | null;
   source: {
     title: string | null;
     startsAt: string | null;
@@ -70,6 +73,14 @@ export interface ListingCard {
     tiers: ListingTier[] | null;
     fetchedAt: string | null;
   };
+}
+
+export interface MergedIntoParty {
+  id: string;
+  name: string;
+  slug: string;
+  date: string | null;
+  listingStatus: 'live' | 'hidden' | 'merged';
 }
 
 export interface ListingIssue {
@@ -142,6 +153,15 @@ const normalizeCard = (c: any): ListingCard => ({
   statusReason: c?.statusReason ?? null,
   locks: Array.isArray(c?.locks) ? c.locks : [],
   canonicalUrl: c?.canonicalUrl ?? null,
+  mergedIntoParty: c?.mergedIntoParty === undefined ? undefined : c.mergedIntoParty?.id
+    ? {
+        id: String(c.mergedIntoParty.id),
+        name: String(c.mergedIntoParty.name ?? ''),
+        slug: String(c.mergedIntoParty.slug ?? ''),
+        date: c.mergedIntoParty.date ?? null,
+        listingStatus: c.mergedIntoParty.listingStatus ?? 'live',
+      }
+    : null,
   source: {
     title: c?.source?.title ?? null,
     startsAt: c?.source?.startsAt ?? null,

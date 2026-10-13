@@ -39,6 +39,8 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 const HIDDEN_REASONS: Record<string, string> = {
+  // Private events aren't hidden any more; the label stays for ones still
+  // waiting for their next sync to bring them back.
   private: 'אירוע פרטי בגו-אאוט', admin: 'הוסתר ידנית',
   test: 'אירוע בדיקה של מפיק', gone: 'העמוד בגו-אאוט נעלם',
 };
@@ -71,7 +73,31 @@ const btn = 'h-11 px-4 text-[15px] font-medium border transition-colors disabled
 const btnPrimary = `${btn} bg-jungle-accent border-jungle-accent text-white hover:bg-opacity-85`;
 const btnQuiet = `${btn} border-wood-brown text-jungle-text hover:bg-white/5`;
 
-const PartyCard: React.FC<{ card: ListingCard; suggested?: boolean; action?: React.ReactNode }> = ({ card, suggested, action }) => {
+// Where a merged duplicate's visitors now land (its slug 308s to the keeper).
+const MergedInto: React.FC<{ card: ListingCard }> = ({ card }) => {
+  const keeper = card.mergedIntoParty;
+  if (!keeper) {
+    return <p className="text-ink-dim">אוחדה לתוך מסיבה שכבר לא קיימת.</p>;
+  }
+  return (
+    <p className="break-words">
+      <span className="text-ink-dim">אוחדה לתוך: </span>
+      {keeper.slug && keeper.listingStatus !== 'merged' ? (
+        <a href={`${SITE_URL}/event/${keeper.slug}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-ink-view underline underline-offset-2">
+          {keeper.name || keeper.slug}
+        </a>
+      ) : (
+        <span className="font-semibold">{keeper.name || keeper.id}</span>
+      )}
+      <span className="block text-xs text-ink-dim">
+        {when(keeper.date)}
+        {keeper.listingStatus === 'hidden' ? ' · גם היא מוסתרת מהאתר' : keeper.listingStatus === 'merged' ? ' · גם היא אוחדה' : ''}
+      </span>
+    </p>
+  );
+};
+
+const PartyCard: React.FC<{ card: ListingCard; suggested?: boolean; action?: React.ReactNode; note?: React.ReactNode }> = ({ card, suggested, action, note }) => {
   const info = card.priceInfo;
   return (
     <div className={`flex flex-col border ${suggested ? 'border-ink-sales' : 'border-wood-brown'} bg-jungle-surface`}>
@@ -115,6 +141,7 @@ const PartyCard: React.FC<{ card: ListingCard; suggested?: boolean; action?: Rea
           ))}
         </ul>
       )}
+      {note && <div className="border-t border-wood-brown px-3 py-2 text-sm">{note}</div>}
       <div className="mt-auto flex items-center justify-between gap-2 border-t border-wood-brown p-3">
         <span className="flex gap-3 text-sm">
           {card.slug && card.listingStatus === 'live' && (
@@ -366,6 +393,7 @@ const AdminIssues: React.FC = () => {
               <PartyCard
                 key={card.id}
                 card={card}
+                note={card.listingStatus === 'merged' && card.mergedIntoParty !== undefined ? <MergedInto card={card} /> : undefined}
                 action={
                   <span className="flex items-center gap-3">
                     <span className="text-xs text-ink-dim">
