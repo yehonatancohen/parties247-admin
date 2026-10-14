@@ -24,6 +24,10 @@ route. Business model and data flow: workspace root `../CLAUDE.md`.
   each merged one showing the party it was folded into (`mergedIntoParty`). Relisting one
   is remembered, the merge is not repeated. The "waiting" tab only fills when the sync itself is broken. Rules live in the
   backend's `listings.py`; this page only shows and undoes.
+- `/ranking` (`AdminRanking.tsx`, `services/ranking.ts`) — site order and per-party
+  commission deals: set ₪ per ticket or % of the ticket price per party (`PUT
+  /api/admin/parties/<id>/commission`), see each party's ₪ per ticket, views/clicks/tickets,
+  buy likelihood and score (`GET /api/admin/ranking`). Recorded sales revenue is not changed.
 - `/audit-log` — backend `adminAuditLog`.
 
 All data comes from `parties247_backend` via `src/services/api.ts`; JWT is kept in
