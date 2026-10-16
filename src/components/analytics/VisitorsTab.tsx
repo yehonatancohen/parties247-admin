@@ -66,7 +66,7 @@ const VisitorsTab: React.FC = () => {
             </dl>
           </Panel>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <BreakdownBars title="מקורות תנועה" items={data.trafficSources} />
             <BreakdownBars title="מכשירים" items={data.devices} />
             <BreakdownBars title="דומיינים מפנים" items={data.topReferrers} labels={false} />

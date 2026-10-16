@@ -61,7 +61,7 @@ export function Segmented<T extends string>({
 }
 
 export const Panel: React.FC<{ title: string; note?: string; actions?: React.ReactNode; children: React.ReactNode; className?: string }> = ({ title, note, actions, children, className = '' }) => (
-  <section className={`bg-jungle-surface border border-wood-brown p-4 sm:p-5 ${className}`}>
+  <section className={`min-w-0 bg-jungle-surface border border-wood-brown p-4 sm:p-5 ${className}`}>
     <div className="flex items-start justify-between gap-3 mb-4">
       <div className="min-w-0">
         <h3 className="text-lg font-bold text-white leading-tight">{title}</h3>

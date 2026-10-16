@@ -58,4 +58,7 @@ totals — both had bugs fixed in 2026-08) after extracting them into `src/lib/`
 - Revenue figures here are **our commission** (account1 ₪25/ticket, account2 6%); the
   `real*` columns are GoOut's numbers. Don't mix them in a tile.
 - Look: 2026-10-02 redesign, "running order" world (ink-indigo ground, three data inks: yellow=sales/commission, orange=clicks, periwinkle=views; Rubik). Tokens live in `tailwind.config.cjs` (legacy `jungle-*` names remapped). The old jungle styling is intentionally gone; do not restore it. Analytics UI is in `src/components/analytics/`, aggregation helpers in `src/lib/analytics.ts`.
+- Phone: the viewport is fixed (no pinch zoom) and `html, body` clip horizontal overflow.
+  Anything inside a grid/flex row that can hold a long party name needs `min-w-0`
+  (`Panel` has it), or the phone zooms the whole page out to fit it.
 - Hero = tickets/commission for parties whose EVENT date is in the chosen month (or all), via `mergePartyRows`/`monthTotals` in `src/lib/analytics.ts` (same logic as the parties table). It is not "sales made during the month"; that would need a backend endpoint over `goout_sales_log.recorded_at`. Time-series `purchases` are only GoOut clicks; day buckets are UTC dates; visits history is capped at 35 days by a TTL, so the chart shows views/clicks only.

@@ -15,9 +15,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+// Phone: one fixed scale. Pinch zoom and the browser zooming out to fit a
+// too-wide block both made the dashboard jump between sizes.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

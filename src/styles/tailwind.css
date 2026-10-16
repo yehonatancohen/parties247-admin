@@ -7,6 +7,16 @@
     color-scheme: dark;
   }
 
+  /* Nothing may widen the page past the screen: a mobile browser zooms the
+     whole page out to fit it. `clip` (not `hidden`) keeps the sticky header. */
+  html,
+  body {
+    overflow-x: clip;
+    max-width: 100%;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   body {
     direction: rtl;
     color: theme('colors.jungle-text');

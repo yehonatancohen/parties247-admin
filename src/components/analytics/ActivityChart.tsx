@@ -4,7 +4,7 @@ import { DetailedAnalyticsResponse, RecentActivityEvent } from '../../data/types
 import { getDetailedAnalytics } from '../../services/api';
 import {
   DayCell, HEBREW_MONTHS_SHORT, HEBREW_WEEKDAYS_SHORT, buildDayGrid, buildHourGrid, formatHour, monthName,
-  readAnalyticsCache, utcDayKey, weekdayOfDayKey, writeAnalyticsCache,
+  readAnalyticsCache, readAnalyticsCacheAt, utcDayKey, weekdayOfDayKey, writeAnalyticsCache,
 } from '../../lib/analytics';
 import { INK_HEX, Panel, Segmented, Skeleton } from './ui';
 
@@ -57,6 +57,8 @@ const ActivityChart: React.FC<{
   const [series, setSeries] = useState<DetailedAnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Load failed but an older copy is on screen: say so, its last days read as empty.
+  const [staleAt, setStaleAt] = useState<number | null>(null);
   const box = useRef<HTMLDivElement>(null);
 
   // 'month' makes no sense when the chip says "since the beginning".
@@ -80,9 +82,14 @@ const ActivityChart: React.FC<{
     setSeries(cached);
     setLoading(!cached);
     setFailed(false);
+    setStaleAt(null);
     getDetailedAnalytics('7d', 'day', undefined, { start: new Date(win.start).toISOString(), end: new Date(win.end).toISOString() })
       .then(d => { if (alive) { setSeries(d); writeAnalyticsCache(cacheKey, d); } })
-      .catch(() => { if (alive && !cached) setFailed(true); })
+      .catch(() => {
+        if (!alive) return;
+        if (cached) setStaleAt(readAnalyticsCacheAt(cacheKey) ?? 0);
+        else setFailed(true);
+      })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [win, cacheKey]);
@@ -172,6 +179,11 @@ const ActivityChart: React.FC<{
         <p className="text-ink-dim py-8 text-center">אין נתונים בטווח הזה</p>
       ) : (
         <>
+          {staleAt != null && (
+            <p role="alert" className="text-ink-click text-[14px] mb-3">
+              הטעינה נכשלה. מוצגים נתונים שמורים{staleAt ? ` מ-${new Date(staleAt).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}, אז הימים האחרונים עלולים להיראות ריקים. רענן.
+            </p>
+          )}
           <dl className="flex gap-x-8 mb-4">
             <div>
               <dt className="text-[13px] text-ink-dim">צפיות</dt>
