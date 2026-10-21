@@ -27,7 +27,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 const FIELD_LABELS: Record<string, string> = {
   name: 'שם', date: 'תאריך', location: 'מיקום', imageUrl: 'תמונה', description: 'תיאור',
-  ticketPrice: 'מחיר', soldOut: 'אזל', region: 'אזור', areas: 'אזורים', listingStatus: 'סטטוס',
+  ticketPrice: 'מחיר', soldOut: 'אזל', region: 'אזור', areas: 'אזורים', listingStatus: 'סטטוס', slug: 'כתובת',
 };
 
 const STATE_LABELS: Record<string, string> = {
@@ -42,7 +42,7 @@ const HIDDEN_REASONS: Record<string, string> = {
   // Private events aren't hidden any more; the label stays for ones still
   // waiting for their next sync to bring them back.
   private: 'אירוע פרטי בגו-אאוט', admin: 'הוסתר ידנית',
-  test: 'אירוע בדיקה של מפיק', gone: 'העמוד בגו-אאוט נעלם',
+  test: 'אירוע בדיקה של מפיק', abroad: 'אירוע מחוץ לישראל', gone: 'העמוד בגו-אאוט נעלם',
 };
 
 const money = (n: number | null | undefined) =>

@@ -175,7 +175,7 @@ const pageTagOptions = pageLinkOptions
   .map((option) => ({ label: option.label, tag: option.tag }));
 
 const HIDDEN_WHY: Record<string, string> = {
-  private: 'private on GoOut', test: 'test event', gone: 'GoOut page is gone', admin: 'by you',
+  private: 'private on GoOut', test: 'test event', abroad: 'outside Israel', gone: 'GoOut page is gone', admin: 'by you',
 };
 
 const LOCK_LABELS: Record<string, string> = {
