@@ -1,6 +1,7 @@
 import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse, WaOverview, WaGroup, WaGroupBundle, WaTemplate, WaCampaign, WaFunnelResponse, WaSettings, WaMembersOverlap, WaSendFact, PromoResponse, PromoCandidate, PartyCommission } from '../data/types';
 import { SeoPageConfig } from '../lib/seoparties';
 import type { HolidayCuration } from '@/lib/holidays';
+import type { AccountReferrals } from '@/lib/referralAccount';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')}/api`
@@ -384,6 +385,24 @@ export const setDefaultReferral = async (code: string): Promise<void> => {
     body: JSON.stringify({ code }),
   });
   if (!response.ok) throw new Error('Failed to set default referral code');
+};
+
+export const getAccountReferrals = async (): Promise<AccountReferrals> => {
+  const response = await getWithRetry(`${API_URL}/admin/account-referrals`, { headers: { ...getAuthHeader() } });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || 'Failed to fetch account referral codes');
+  return { account1: String(data.account1 || ''), account2: String(data.account2 || '') };
+};
+
+export const setAccountReferrals = async (codes: AccountReferrals): Promise<AccountReferrals> => {
+  const response = await fetch(`${API_URL}/admin/account-referrals`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+    body: JSON.stringify(codes),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || 'Failed to save account referral codes');
+  return { account1: String(data.account1 || ''), account2: String(data.account2 || '') };
 };
 
 export const getPartyCommission = async (): Promise<Record<string, PartyCommission>> => {

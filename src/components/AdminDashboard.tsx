@@ -1,10 +1,11 @@
 "use client"
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, createContext, useContext } from 'react';
 import { useParties } from '../hooks/useParties';
 import { Party, Carousel } from '../data/types';
 import LoadingSpinner from './LoadingSpinner';
 import { BASE_URL, LAST_TICKETS_TAG } from '../data/constants';
-import { referralAccount, referralFromUrl } from '../lib/referralAccount';
+import { referralAccount, referralFromUrl, DEFAULT_ACCOUNT_REFERRALS, AccountReferrals } from '../lib/referralAccount';
+import * as api from '../services/api';
 import { SearchIcon, EditIcon, ChevronDownIcon, ArrowUpIcon, ArrowDownIcon, MegaphoneIcon, ShareIcon, RefreshIcon, DocumentDuplicateIcon } from './Icons';
 
 const MoreIcon = ({ className }: { className?: string }) => (
@@ -22,8 +23,10 @@ const TrashIcon = ({ className }: { className?: string }) => (
 );
 
 // Says which GoOut account a referral code belongs to, wherever a code is shown.
+const AccountReferralsContext = createContext<AccountReferrals>(DEFAULT_ACCOUNT_REFERRALS);
+
 const ReferralAccountBadge: React.FC<{ code?: string | null; note?: string }> = ({ code, note }) => {
-  const account = referralAccount(code);
+  const account = referralAccount(code, useContext(AccountReferralsContext));
   if (!account) return null;
   const style = account === 'account1'
     ? 'bg-ink-sales text-jungle-deep'
@@ -403,6 +406,8 @@ const AdminDashboard: React.FC = () => {
   const [selectedPageTags, setSelectedPageTags] = useState<string[]>([]);
 
   const [localDefaultReferral, setLocalDefaultReferral] = useState('');
+  const [accountReferrals, setAccountReferralsState] = useState<AccountReferrals>(DEFAULT_ACCOUNT_REFERRALS);
+  const [accountReferralsDraft, setAccountReferralsDraft] = useState<AccountReferrals>(DEFAULT_ACCOUNT_REFERRALS);
   const [newCarouselTitle, setNewCarouselTitle] = useState('');
 
   const [editingParty, setEditingParty] = useState<Party | null>(null);
@@ -425,6 +430,12 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     setLocalDefaultReferral(defaultReferral);
   }, [defaultReferral]);
+
+  useEffect(() => {
+    api.getAccountReferrals()
+      .then((codes) => { setAccountReferralsState(codes); setAccountReferralsDraft(codes); })
+      .catch((e) => console.error('Failed to load account referral codes:', e));
+  }, []);
 
 
   const { activeParties, archivedParties } = useMemo(() => {
@@ -517,6 +528,17 @@ const AdminDashboard: React.FC = () => {
     if (newCarouselTitle.trim()) {
       await addCarousel(newCarouselTitle.trim());
       setNewCarouselTitle('');
+    }
+  };
+
+  const handleSaveAccountReferrals = async () => {
+    try {
+      const saved = await api.setAccountReferrals(accountReferralsDraft);
+      setAccountReferralsState(saved);
+      setAccountReferralsDraft(saved);
+      alert('Account referral codes saved!');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not save account referral codes.');
     }
   };
 
@@ -1082,6 +1104,7 @@ const AdminDashboard: React.FC = () => {
   ];
 
   return (
+    <AccountReferralsContext.Provider value={accountReferrals}>
     <div className="bg-jungle-surface p-6 rounded-lg shadow-lg border border-wood-brown w-full space-y-6">
       {editingParty && (
         <EditPartyModal
@@ -1143,6 +1166,26 @@ const AdminDashboard: React.FC = () => {
               />
               <ReferralAccountBadge code={localDefaultReferral} />
               <button onClick={handleSaveDefaultReferral} className="bg-jungle-accent text-white font-bold py-2 px-4 rounded-md hover:bg-opacity-80">Save</button>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold mb-1 text-jungle-lime">קודי הפניה לפי חשבון</h3>
+            <p className="text-xs text-jungle-text/60 mb-3">לפי הקודים האלה הדשבורד מסמן ליד כל רפלינק אם הוא של חשבון 1 או חשבון 2. זה משנה רק את הסימון כאן, לא את הקודים שהסורק משתמש בהם.</p>
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+              {(['account1', 'account2'] as const).map((account) => (
+                <label key={account} className="flex items-center gap-2 text-sm text-jungle-text/80 min-w-0">
+                  <span className="whitespace-nowrap">{account === 'account1' ? 'חשבון 1' : 'חשבון 2'}</span>
+                  <input
+                    type="text"
+                    dir="ltr"
+                    value={accountReferralsDraft[account]}
+                    onChange={(e) => setAccountReferralsDraft((prev) => ({ ...prev, [account]: e.target.value }))}
+                    className="w-full min-w-0 bg-jungle-surface text-jungle-text p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none"
+                  />
+                </label>
+              ))}
+              <button onClick={handleSaveAccountReferrals} className="bg-jungle-accent text-white font-bold py-2 px-4 rounded-md hover:bg-opacity-80">Save</button>
             </div>
           </div>
 
@@ -1356,6 +1399,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
     </div>
+    </AccountReferralsContext.Provider>
   );
 };
 
