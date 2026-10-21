@@ -4,6 +4,7 @@ import { useParties } from '../hooks/useParties';
 import { Party, Carousel } from '../data/types';
 import LoadingSpinner from './LoadingSpinner';
 import { BASE_URL, LAST_TICKETS_TAG } from '../data/constants';
+import { referralAccount, referralFromUrl } from '../lib/referralAccount';
 import { SearchIcon, EditIcon, ChevronDownIcon, ArrowUpIcon, ArrowDownIcon, MegaphoneIcon, ShareIcon, RefreshIcon, DocumentDuplicateIcon } from './Icons';
 
 const MoreIcon = ({ className }: { className?: string }) => (
@@ -19,6 +20,21 @@ const TrashIcon = ({ className }: { className?: string }) => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
   </svg>
 );
+
+// Says which GoOut account a referral code belongs to, wherever a code is shown.
+const ReferralAccountBadge: React.FC<{ code?: string | null; note?: string }> = ({ code, note }) => {
+  const account = referralAccount(code);
+  if (!account) return null;
+  const style = account === 'account1'
+    ? 'bg-ink-sales text-jungle-deep'
+    : account === 'account2' ? 'bg-ink-cell text-ink-dim' : 'bg-jungle-accent/20 text-jungle-accent';
+  const label = account === 'account1' ? 'חשבון 1' : account === 'account2' ? 'חשבון 2' : 'קוד לא מוכר';
+  return (
+    <span className={`px-1.5 py-0.5 text-xs font-bold whitespace-nowrap ${style}`} title={code || ''}>
+      {label}{note ? ` · ${note}` : ''}
+    </span>
+  );
+};
 
 // Replaces window.confirm/alert-style native popups with an in-app dialog,
 // so destructive actions get a consistent, non-jarring confirmation.
@@ -88,6 +104,7 @@ const ClonePartyModal: React.FC<{ party: Party; onClose: () => void; onClone: (u
           <div>
             <label htmlFor="referral" className="block text-sm text-jungle-text/80 mb-1">Referral Code (Optional)</label>
             <input type="text" id="referral" value={referral} onChange={(e) => setReferral(e.target.value)} className={inputClass} />
+            <div className="mt-1"><ReferralAccountBadge code={referral || referralFromUrl(url)} /></div>
           </div>
           <div>
             <label htmlFor="pixelId" className="block text-sm text-jungle-text/80 mb-1">Meta Pixel ID (Optional)</label>
@@ -294,6 +311,7 @@ const EditPartyModal: React.FC<{ party: Party; onClose: () => void; onSave: (upd
             <div>
               <label htmlFor="originalUrl" className="block text-sm text-jungle-text/80 mb-1">Ticket URL</label>
               <input type="url" id="originalUrl" name="originalUrl" value={formData.originalUrl} onChange={handleChange} className={inputClass} required />
+              <div className="mt-1"><ReferralAccountBadge code={referralFromUrl(formData.originalUrl)} /></div>
             </div>
           </div>
           <div>
@@ -912,6 +930,11 @@ const AdminDashboard: React.FC = () => {
                 placeholder="Default"
                 className="w-full max-w-[150px] bg-jungle-surface text-jungle-text p-1 rounded-sm border border-wood-brown text-xs"
               />
+              {party.referralCode
+                ? <ReferralAccountBadge code={party.referralCode} />
+                : referralFromUrl(party.originalUrl)
+                  ? <ReferralAccountBadge code={referralFromUrl(party.originalUrl)} note="מהלינק" />
+                  : <ReferralAccountBadge code={defaultReferral} note="ברירת מחדל" />}
             </div>
           </div>
 
@@ -1118,6 +1141,7 @@ const AdminDashboard: React.FC = () => {
                 placeholder="e.g., a312e1e1g1"
                 className="flex-grow bg-jungle-surface text-jungle-text p-2 rounded-md border border-wood-brown focus:ring-2 focus:ring-jungle-lime focus:outline-none"
               />
+              <ReferralAccountBadge code={localDefaultReferral} />
               <button onClick={handleSaveDefaultReferral} className="bg-jungle-accent text-white font-bold py-2 px-4 rounded-md hover:bg-opacity-80">Save</button>
             </div>
           </div>
