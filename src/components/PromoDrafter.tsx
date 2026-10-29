@@ -6,7 +6,7 @@ import { PromoCandidate, PromoResponse } from '@/data/types';
 import LoadingSpinner from './LoadingSpinner';
 
 // WhatsApp promo drafter: the parties most worth pushing to the promo groups
-// right now, ranked by expected commission (account1 flat ₪25/ticket first,
+// right now, ranked by expected commission (account1 flat ₪15/ticket,
 // then account2 6%), each with a ready-to-paste Hebrew message. Copy, paste
 // into WhatsApp, done. Ranking + text come from the backend (promo.py); this
 // page only lets you tweak the text before copying.
@@ -37,9 +37,9 @@ const TierBadge = ({ tier }: { tier: PromoCandidate['tier'] }) => (
         ? 'bg-yellow-400/15 text-yellow-300 border border-yellow-400/30'
         : 'bg-jungle-lime/10 text-jungle-lime border border-jungle-lime/20'
     }`}
-    title={tier === 'account1' ? 'מסיבת שותפים — ₪25 לכרטיס' : 'GoOut כללי — 6% מהמחיר'}
+    title={tier === 'account1' ? 'מסיבת שותפים — ₪15 לכרטיס' : 'GoOut כללי — 6% מהמחיר'}
   >
-    {tier === 'account1' ? '₪25 לכרטיס' : '6%'}
+    {tier === 'account1' ? '₪15 לכרטיס' : '6%'}
   </span>
 );
 
@@ -291,7 +291,7 @@ const PromoDrafter: React.FC = () => {
             <div className="space-y-3">
               <h3 className="text-lg font-semibold text-jungle-lime">מה יש כאן</h3>
               <div className="flex justify-between text-sm"><span className="text-jungle-text/60">מסיבות מוצעות</span><span className="text-jungle-text font-semibold">{totals.count}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-jungle-text/60">מתוכן של שותפים (₪25)</span><span className="text-yellow-300 font-semibold">{totals.account1}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-jungle-text/60">מתוכן של שותפים (₪15)</span><span className="text-yellow-300 font-semibold">{totals.account1}</span></div>
               <div className="flex justify-between text-sm"><span className="text-jungle-text/60">כרטיסים שנמכרו ב-30 יום</span><span className="text-jungle-text font-semibold">{totals.tickets}</span></div>
               <p className="text-xs text-jungle-text/50 pt-2 border-t border-wood-brown">
                 הציון = עמלה לכרטיס × (1 + כרטיסים ב-30 יום) × דחיפות (×2 עד יומיים, ×1.5 עד 4 ימים).

@@ -72,7 +72,7 @@ export const getRanking = async (): Promise<RankingResponse> => {
   return {
     generatedAt: data?.generatedAt ?? null,
     defaults: {
-      account1FlatFee: num(data?.defaults?.account1FlatFee, 25),
+      account1FlatFee: num(data?.defaults?.account1FlatFee, 15),
       account2Percent: num(data?.defaults?.account2Percent, 6),
     },
     parties: (Array.isArray(data?.parties) ? data.parties : []).map((p: any): RankedParty => ({

@@ -116,7 +116,7 @@ export interface BreakdownItem {
 
 export interface PartySalesRecord {
   goOutEventId: string;
-  // Which GoOut account this event was tracked under (account1: flat ₪25/ticket
+  // Which GoOut account this event was tracked under (account1: flat ₪15/ticket
   // revenue rule, account2: 6% of gross revenue) — see sales_tracker.py.
   accountId: string | null;
   partyId: string | null;
@@ -466,7 +466,7 @@ export interface PromoCandidate {
   musicType: string;
   age: string;
   ticketPrice: number | null;
-  tier: PromoTier;       // account1 = flat ₪25/ticket, account2 = 6% of price
+  tier: PromoTier;       // account1 = flat ₪15/ticket, account2 = 6% of price
   expectedPerTicket: number;
   ticketsLast30d: number;
   revenueLast30d: number;
