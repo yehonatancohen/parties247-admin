@@ -10,6 +10,7 @@ const JWT_TOKEN_STORAGE = 'jwtAuthToken';
 const navItems = [
   { href: '/analytics', end: false, label: 'אנליטיקס' },
   { href: '/attribution', end: false, label: 'מקורות רכישה' },
+  { href: '/export', end: false, label: 'ייצוא לאקסל' },
   { href: '/', end: true, label: 'ניהול קטלוג' },
   { href: '/issues', end: false, label: 'בקרת מסיבות' },
   { href: '/ranking', end: false, label: 'דירוג ועמלות' },

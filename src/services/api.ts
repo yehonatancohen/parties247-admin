@@ -1,3 +1,4 @@
+import type { ExportData } from '../lib/exportWorkbook';
 import { Party, Carousel, AnalyticsSummary, AnalyticsSummaryParty, DetailedAnalyticsResponse, RecentActivityResponse, RecentActivityFilters, VisitorAnalyticsResponse, AuditLogResponse, PartySalesRecord, FunnelResponse, WaOverview, WaGroup, WaGroupBundle, WaTemplate, WaCampaign, WaFunnelResponse, WaSettings, WaMembersOverlap, WaSendFact, PromoResponse, PromoCandidate, PartyCommission } from '../data/types';
 import { SeoPageConfig } from '../lib/seoparties';
 import type { HolidayCuration } from '@/lib/holidays';
@@ -942,4 +943,17 @@ export const getWhatsappPromo = async (days: number = 7, limit: number = 12): Pr
     candidates,
     digest: String(data.digest ?? ''),
   };
+};
+
+/** Everything in one date range for the Excel export (backend export_data.py).
+ *  from = null for all time; days are Israel-local, `to` inclusive. */
+export const getExportData = async (from: string | null, to: string): Promise<ExportData> => {
+  const params = new URLSearchParams({ to });
+  if (from) params.set('from', from);
+  const response = await getWithRetry(`${API_URL}/admin/export?${params}`, {
+    headers: { ...getAuthHeader() },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || 'Failed to fetch export data');
+  return data as ExportData;
 };

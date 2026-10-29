@@ -3,21 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 import { getAttribution, AttributionResponse } from '../services/api';
-
-const CHANNEL_LABELS: Record<string, string> = {
-  direct: 'ישיר / לא ידוע',
-  google: 'גוגל',
-  other_search: 'מנועי חיפוש אחרים',
-  instagram: 'אינסטגרם',
-  facebook: 'פייסבוק',
-  tiktok: 'טיקטוק',
-  telegram: 'טלגרם',
-  whatsapp: 'וואטסאפ',
-  twitter: 'טוויטר / X',
-  ai_assistant: 'עוזרי AI',
-  referral: 'אתרים אחרים',
-  untracked: 'לפני תחילת המעקב',
-};
+import { CHANNEL_LABELS } from '../lib/channels';
 
 const money = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`;
 const pct = (n: number | null) => (n === null ? '-' : `${(n * 100).toFixed(1)}%`);

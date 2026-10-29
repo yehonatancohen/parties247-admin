@@ -28,6 +28,11 @@ route. Business model and data flow: workspace root `../CLAUDE.md`.
   commission deals: set ₪ per ticket or % of the ticket price per party (`PUT
   /api/admin/parties/<id>/commission`), see each party's ₪ per ticket, views/clicks/tickets,
   buy likelihood and score (`GET /api/admin/ranking`). Recorded sales revenue is not changed.
+- `/export` (`AdminExport.tsx`) — Excel download for a range (7/30 days, a month, this year,
+  all time, or two dates; Israel days, end inclusive). Data from `GET /api/admin/export`
+  (backend `export_data.py`); the file is built in the browser by `src/lib/exportWorkbook.ts`
+  with `exceljs`, imported only on click. Views are grouped per party per day, every click
+  to GoOut and every sale is its own row, and each sale carries the clicks before it.
 - `/audit-log` — backend `adminAuditLog`.
 
 All data comes from `parties247_backend` via `src/services/api.ts`; JWT is kept in
@@ -55,7 +60,7 @@ totals — both had bugs fixed in 2026-08) after extracting them into `src/lib/`
   `party.locks`). The per-party refresh button calls the backend `resync`; there is no
   client-side GoOut scraper any more (`scrapeService.ts` was deleted — saving a browser
   scrape as an edit would lock every field).
-- Revenue figures here are **our commission** (account1 ₪25/ticket, account2 6%); the
+- Revenue figures here are **our commission** (account1 ₪15/ticket from October 2026, ₪25 before; account2 6%); the
   `real*` columns are GoOut's numbers. Don't mix them in a tile.
 - Look: 2026-10-02 redesign, "running order" world (ink-indigo ground, three data inks: yellow=sales/commission, orange=clicks, periwinkle=views; Rubik). Tokens live in `tailwind.config.cjs` (legacy `jungle-*` names remapped). The old jungle styling is intentionally gone; do not restore it. Analytics UI is in `src/components/analytics/`, aggregation helpers in `src/lib/analytics.ts`.
 - Phone: the viewport is fixed (no pinch zoom) and `html, body` clip horizontal overflow.
